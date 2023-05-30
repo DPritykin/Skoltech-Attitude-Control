@@ -8,6 +8,9 @@ function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, trqDist)
     trqGrav = 3 * orb.meanMotion^2 * crossProduct(ez_b, sat.J * ez_b);
 
     %% Magnetic torque
+    if ~exist('mCtrl', 'var')
+        mCtrl = [0; 0; 0];
+    end    
     trqMagn = crossProduct(mCtrl, envB);
 
     %% Disturbance torque

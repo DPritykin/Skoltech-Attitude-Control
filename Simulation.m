@@ -52,7 +52,7 @@ classdef Simulation < handle
 
         % adds EKF to simulation
         function setFilter(this, ekf)
-            if isa(ekf, ExtendedKalmanFilter)
+            if isa(ekf, 'KalmanFilter')
                 this.ekf = ekf;
             else
                 error('Simulation:InvalidFilter', 'Invalid EKF object!')
@@ -73,6 +73,7 @@ classdef Simulation < handle
 
             t = 0;
             mCtrl = [0; 0; 0];
+            stateEst = [1; 0; 0; 0; 0; 0; 0;];
             simResults = zeros(8, ceil(this.simulationTime / this.sat.controlParams.tLoop));
 
             for iterIdx = 1:size(simResults, 2)
@@ -101,9 +102,13 @@ classdef Simulation < handle
                 mtmMeasuredField = this.calcSensorMagnField(t, q0);
 
                 %% state estimation (Extended Kalman filter)
-                %TODO
-                qEst = q0;
-                omegaEst = omega0;
+                t0 = t - this.sat.controlParams.tLoop;
+                bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
+                bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
+                bSensor = this.sat.mtm.getSensorReadings(quatRotate(q0, bmodelT));
+                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, bSensor);
+                qEst = stateEst(1:4);
+                omegaEst = stateEst(5:7);
 
                 %% control moment for the next control loop (based on the Kalman estimate of the state)                
                 omegaRel = omegaEst - quatRotate(qEst, [0; this.orb.meanMotion; 0]);

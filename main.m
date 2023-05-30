@@ -12,7 +12,7 @@ env = Environment(dstSigma = 3e-9, magnSigma = 2e-7);
 % environment, altitude [km], and inclination [deg]
 orb = CircularOrbit(env, 470, 52);
 
-%% satellite parameters structure
+%% satellite settings
 
 % [kg * m^2] inertia tensor for satellite
 sat = Satellite(diag([0.015 0.015 0.007]));
@@ -29,6 +29,10 @@ mtm = Magnetometer(bias = [0; 0; 0;], ...         % [T] magnetometer bias
 
 sat.setMagnetometer(mtm);
 
+%% EKF settings
+% satellite, orbit, and environment objects
+% sigmaQ0, sigmaOmega0 initialize the error covariance matrix
+ekf = KalmanFilter(sat = sat, orb = orb, env = env, sigmaQ0 = 1, sigmaOmega0 = 0.1);
 
 %% simulation settings
 
@@ -38,12 +42,8 @@ sim = Simulation(simulationTime);
 sim.setEnvironment(env);
 sim.setOrbit(orb);
 sim.setSatellite(sat);
+sim.setFilter(ekf);
 
 %% simulation loop
-simRunsCount = 1;
-RMSE = zeros(6, simRunsCount);
-
-for i = 1:simRunsCount
-    simResults = sim.run();    
-    sim.plotResults(simResults);
-end
+simResults = sim.run();    
+sim.plotResults(simResults);
