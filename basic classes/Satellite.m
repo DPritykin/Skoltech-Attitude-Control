@@ -35,8 +35,8 @@ classdef Satellite < handle
                 parameters.kQ {mustBeNumeric} = 0;
             end
 
-            this.controlParams.tCtrl = parameters.tMeas;
-            this.controlParams.tMeas = parameters.tCtrl;
+            this.controlParams.tCtrl = parameters.tCtrl;
+            this.controlParams.tMeas = parameters.tMeas;
             this.controlParams.kW = parameters.kW;
             this.controlParams.kQ = parameters.kQ;
 
