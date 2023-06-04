@@ -41,9 +41,8 @@ classdef Satellite < handle
             % [s] control loop duration
             this.controlParams.tLoop = parameters.tCtrl + parameters.tMeas;
 
-            quat = parameters.qReq;
             % conjugate quaternion
-            this.controlParams.qReqCnj = [quat(1); -quat(2:4)];
+            this.controlParams.qReqCnj = quatConjugate(parameters.qReq);
         end
 
         function setMagnetometer(this, mtm)
@@ -51,6 +50,14 @@ classdef Satellite < handle
                 this.mtm = mtm;
             else
                 error('Satellite:InvalidMtm', 'Invalid Magnetometer object!');
+            end
+        end
+
+        function setGyroscope(this, gyro)
+            if isa(gyro, 'Gyroscope')
+                this.gyro = gyro;
+            else
+                error('Satellite:InvalidGyro', 'Invalid Gyroscope object!');
             end
         end
 
@@ -78,10 +85,16 @@ classdef Satellite < handle
             m = (-ctrl.kW * crossProduct(B, omegaRel) - ctrl.kQ * crossProduct(B, S)) * ctrl.tLoop / ctrl.tCtrl;
 
             if any(abs(m) > this.mtq.maxMagneticMoment)
-
                 maxRatio = max(abs(m) ./ this.mtq.maxMagneticMoment);
                 m = m / maxRatio;
             end
-        end        
+        end
+
+        function m = calcBdotMagneticMoment(this, magnField, angVelocity)
+            m = cross(angVelocity, magnField);
+
+            maxRatio = max(abs(m) ./ this.mtq.maxMagneticMoment);
+            m = m / maxRatio;
+        end
     end
 end

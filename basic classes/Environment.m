@@ -11,14 +11,14 @@ classdef Environment < handle
     end
 
     methods
-        function this = Environment(options)
+        function this = Environment(parameters)
             arguments
-                options.dstSigma {mustBeNumeric} = [0; 0; 0];
-                options.magnSigma {mustBeNumeric} = [0; 0; 0];
+                parameters.distTorqueSigma {mustBeNumeric} = [0; 0; 0];
+                parameters.magnFieldSigma {mustBeNumeric} = [0; 0; 0];
             end
 
-            this.distTorqueSigma = options.dstSigma;
-            this.magnFieldSigma = options.magnSigma;
+            this.distTorqueSigma = parameters.distTorqueSigma;
+            this.magnFieldSigma = parameters.magnFieldSigma;
         end
 
         function B = directDipoleOrbital(this, argLat, inclination, orbitRadius)

@@ -1,9 +1,3 @@
-% An example of a satellite (3U CubeSat) in a circular orbit
-% required attitude - orbital
-% adcs sensor - magnetometer
-% adcs actuators - 3 magnetorquers
-% adcs state determination - Extended Kalman Filter
-
 clc
 clear
 
@@ -24,10 +18,7 @@ sat = Satellite(diag([0.015 0.014 0.007])); % [kg * m^2] inertia tensor for sate
 
 % defining control parameters
 sat.setControlParams(tMeas = 0.5, ...           % [s] sampling time step
-                     tCtrl = 3, ...             % [s] control time step
-                     qReq = [1; 0; 0; 0], ...   % [-] required orbital orientation
-                     kQ = 12, ...               % [N * m / T^2] orientating parameter for PID-regulator
-                     kW = 60 / orb.meanMotion)  % [N * m * s / T^2] stabilizing parameter for PID-regulator
+                     tCtrl = 1);                % [s] control time step
 
 % adding a magnetometer
 mtm = Magnetometer(bias = [0; 0; 0;], ...         % [T] magnetometer bias
@@ -35,6 +26,12 @@ mtm = Magnetometer(bias = [0; 0; 0;], ...         % [T] magnetometer bias
                    position = [2; 2; -3] * 1e-2); % [m] magnetometer position in the body-frame
 
 sat.setMagnetometer(mtm);
+
+% adding a gyroscope
+gyro = Gyroscope(bias = [0; 0; 0;], ...           % [s^-1] gyroscope bias
+                 sigma = 1e-5);                   % [s^-1] gyroscope measurement deviation
+
+sat.setGyroscope(gyro);
 
 % defining a magnetorquer
 mtq = Magnetorquer(area = 0.05^2, ...             % [m^2] area of a coil
@@ -48,25 +45,19 @@ standardMtqArray = MtqArray(baselineMtq = mtq, ...      % a Magnrtorquer object
 
 sat.setMtqArray(standardMtqArray);
 
-%% EKF settings
 
-ekf = KalmanFilter(sat = sat, ...      % Satellite object
-                   orb = orb, ...      % CircularOrbit object 
-                   env = env, ...      % Environment object
-                   sigmaQ0 = 1, ...    % variance to initialize the error covariance matrix (quaternion part)
-                   sigmaOmega0 = 0.1); % variance to initialize the error covariance matrix (omega part)
 
 %% simulation settings
 
-simulationTime = 8 * 3600;
+simulationTime = 2 * 3600;
 sim = Simulation(simulationTime);
 
 sim.setEnvironment(env);
 sim.setOrbit(orb);
 sim.setSatellite(sat);
-sim.setFilter(ekf);
 
 %% simulation loop
-simResults = sim.run('fullMagneticControl');
+omega0 = normrnd(0, 0.5, [3, 1]);
+simResults = sim.run('bDotControl', omega0);
 
 sim.plotResults(simResults);
