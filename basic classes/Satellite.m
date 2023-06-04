@@ -10,8 +10,6 @@ classdef Satellite < handle
         gyro          % gyroscope
 
         mtq           % magnetorquer array
-
-        maxMagneticMoment = 0.2 % [A * m^2] maximal dipole moment
     end
 
     methods
@@ -56,6 +54,14 @@ classdef Satellite < handle
             end
         end
 
+        function setMtqArray(this, mtqArray)
+            if isa(mtqArray, 'MtqArray')
+                this.mtq = mtqArray;
+            else
+                error('Satellite:InvalidMtq', 'Invalid Magnetorquer Array object!');
+            end
+        end
+
         function m = calcControlMagneticMoment(this, q, omegaRel, B)
 
             ctrl = this.controlParams;
@@ -71,8 +77,10 @@ classdef Satellite < handle
 
             m = (-ctrl.kW * crossProduct(B, omegaRel) - ctrl.kQ * crossProduct(B, S)) * ctrl.tLoop / ctrl.tCtrl;
 
-            if abs(max(m)) > this.maxMagneticMoment
-                m = m * this.maxMagneticMoment / abs(max(m));
+            if any(abs(m) > this.mtq.maxMagneticMoment)
+
+                maxRatio = max(abs(m) ./ this.mtq.maxMagneticMoment);
+                m = m / maxRatio;
             end
         end        
     end
