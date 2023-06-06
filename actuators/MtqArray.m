@@ -8,13 +8,11 @@ classdef MtqArray < handle
     methods
         function this = MtqArray(parameters)
             arguments
-                parameters.baselineMtq
+                parameters.baselineMtq Magnetorquer
                 parameters.maxInputVoltage {mustBePositive} = 5;
                 parameters.mtqCount {mustBeNumericOrLogical} = 3;
                 parameters.doStandardXyzArray {mustBeNumericOrLogical} = true;
             end
-
-            mustBeA(parameters.baselineMtq, 'Magnetorquer');
 
             mtqArray(1, parameters.mtqCount) = parameters.baselineMtq;
             this.magnetorquers = mtqArray;

@@ -1,4 +1,4 @@
-function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, trqDist)
+function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, rwCtrl, trqDist)
 
     q = x(1:4) / norm(x(1:4));
     omega = x(5:7);
@@ -13,6 +13,13 @@ function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, trqDist)
     end    
     trqMagn = crossProduct(mCtrl, envB);
 
+    %% Reaction wheels control torque
+    if ~exist('rwCtrl', 'var')
+        trqRw = [0; 0; 0];
+    else
+        trqRw = rwCtrl;
+    end
+
     %% Disturbance torque
     if ~exist('trqDist', 'var')
         trqDist = [0; 0; 0];
@@ -24,8 +31,13 @@ function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, trqDist)
     dq = 0.5 * quatProduct(q, [0; Omega]);
 
     dOmega = sat.invJ * (- crossProduct(omega, (sat.J) * omega) + ...
-                           trqMagn + trqGrav + trqDist);
+                           trqMagn + trqRw + trqGrav + trqDist);
 
-    res = [dq; dOmega];
+    if length(x) == 10
+        dh = -trqRw;
+        res = [dq; dOmega; dh];
+    else
+        res = [dq; dOmega];
+    end
 end
 

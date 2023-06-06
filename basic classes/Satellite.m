@@ -10,6 +10,7 @@ classdef Satellite < handle
         gyro          % gyroscope
 
         mtq           % magnetorquer array
+        rw            % reaction wheels array
     end
 
     methods
@@ -22,11 +23,13 @@ classdef Satellite < handle
             arguments
                 this
                 % [s] sampling time step
-                parameters.tMeas {mustBeNumeric} = 0.5;
+                parameters.tMeas {mustBeNumeric} = 0;
                 % [s] control time step
-                parameters.tCtrl {mustBeNumeric} = 2;
+                parameters.tCtrl {mustBeNumeric} = 0;
                 % [-] required orbital orientation
-                parameters.qReq {mustBeNumeric} = [1; 0; 0; 0];
+                parameters.qReq(4, 1) {mustBeNumeric} = [1; 0; 0; 0];
+                % [-] required angular velocity (absolute)
+                parameters.omegaReq(3, 1) {mustBeNumeric} = [0; 0; 0];                
                 % [N * m * s / T^2] stabilizing parameter for PID-regulator
                 parameters.kW {mustBeNumeric} = 0;
                 % [N * m / T^2] orientating parameter for PID-regulator
@@ -43,6 +46,7 @@ classdef Satellite < handle
 
             % conjugate quaternion
             this.controlParams.qReqCnj = quatConjugate(parameters.qReq);
+            this.controlParams.omegaReq = parameters.omegaReq;
         end
 
         function setMagnetometer(this, mtm)
@@ -66,6 +70,14 @@ classdef Satellite < handle
                 this.mtq = mtqArray;
             else
                 error('Satellite:InvalidMtq', 'Invalid Magnetorquer Array object!');
+            end
+        end
+
+        function setRwArray(this, rwArray)
+            if isa(rwArray, 'RwArray')
+                this.rw = rwArray;
+            else
+                error('Satellite:InvalidRw', 'Invalid Reaction Wheels Array object!');
             end
         end
 
@@ -95,6 +107,17 @@ classdef Satellite < handle
 
             maxRatio = max(abs(m) ./ this.mtq.maxMagneticMoment);
             m = m / maxRatio;
+        end
+
+        function trq = calcRwControl(this, q, omega, rwAngMomentum, externalTorqueToCompensate)
+            quatErr = quatProduct(this.controlParams.qReqCnj, q);
+            omegaErr = omega - this.controlParams.omegaReq;
+
+            trqToActuate = -externalTorqueToCompensate ...
+                           -this.controlParams.kW * this.J * omegaErr ...
+                           -this.controlParams.kQ * this.J * quatErr(2:4);
+
+            trq = this.rw.actuateCommand(trqToActuate, this.controlParams.tLoop, rwAngMomentum);
         end
     end
 end

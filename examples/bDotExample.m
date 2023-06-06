@@ -39,7 +39,7 @@ mtq = Magnetorquer(area = 0.05^2, ...             % [m^2] area of a coil
                    resistance = 25);              % [Ohm] wire resistance
 
 % setting up an array of 3 identical magnetorquers onboard of the sat
-standardMtqArray = MtqArray(baselineMtq = mtq, ...      % a Magnrtorquer object
+standardMtqArray = MtqArray(baselineMtq = mtq, ...      % a Magnetorquer object
                             maxInputVoltage = 5, ...    % [V] maximum innput voltage available in EPS
                             doStandardXyzArray = true); % 3 mtqs along the X, y, and Z axes of the satellite body-frame
 
@@ -58,6 +58,44 @@ sim.setSatellite(sat);
 
 %% simulation loop
 omega0 = normrnd(0, 0.5, [3, 1]);
-simResults = sim.run('bDotControl', omega0);
+simResults = sim.run(SimulationType.bDotControl, omega0);
 
-sim.plotResults(simResults);
+plotResults(simResults);
+
+%% plotter
+function plotResults(simData)
+    [pitch, roll, yaw] = quat2angle(simData(2:5, 1:end)', 'YXZ');
+    
+    pitch = rad2deg(pitch);
+    roll = rad2deg(roll);
+    yaw = rad2deg(yaw);    
+        
+    red = [203/255, 37/255, 37/255];
+    green = [138/255, 181/255, 73/255];
+    blue = [33/255, 144/255, 209/255];
+    
+    timeInHours = simData(1, :) / 3600;
+
+    figure
+    subplot(1, 2, 1)
+    plot(timeInHours, pitch, 'Color', red, 'LineWidth', 2)
+    hold on
+    plot(timeInHours, roll, 'Color', green, 'LineWidth', 2)
+    hold on
+    plot(timeInHours, yaw, 'Color', blue, 'LineWidth', 2)
+    grid on
+    xlabel('Time in hours')
+    ylabel('Euler Angles, [deg]')
+    legend('pitch','roll','yaw');
+       
+    subplot(1, 2, 2) % angular velocity
+    plot(timeInHours, simData(6, :), 'Color', red, 'LineWidth', 2)
+    hold on
+    plot(timeInHours, simData(7, :), 'Color', green, 'LineWidth', 2)
+    hold on
+    plot(timeInHours, simData(8, :), 'Color', blue, 'LineWidth', 2)
+    grid on
+    xlabel('Time in hours')
+    ylabel('Angular Velocity Components, [rad/sec]')
+    legend('\omega_1','\omega_2','\omega_3');    
+end
