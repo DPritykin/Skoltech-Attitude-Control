@@ -1,6 +1,6 @@
 % An example of a satellite (3U CubeSat) in a circular orbit
 % required attitude - orbital
-% adcs sensors - magnetometer / gyroscope
+% adcs sensors - magnetometer 
 % adcs actuators - 3 magnetorquers
 % adcs state determination - Extended Kalman Filter
 
@@ -35,13 +35,6 @@ mtm = Magnetometer(bias = [0; 0; 0;], ...         % [T] magnetometer bias
                    position = [2; 2; -3] * 1e-2); % [m] magnetometer position in the body-frame
 
 sat.setMagnetometer(mtm);
-
-% adding a gyroscope
-gyro = Gyroscope(bias = [0; 0; 0;], ...         % [T] magnetometer bias
-                   sigma = 1.45e-6, ...              % [rad/s] magnetometer measurement deviation (0.3 deg/hr : STIM 377H Gyro)
-                   position = [1; 1; -3] * 1e-2); % [m] magnetometer position in the body-frame
-
-sat.setGyroscope(gyro);
 
 % defining a magnetorquer
 mtq = Magnetorquer(area = 0.05^2, ...             % [m^2] area of a coil
