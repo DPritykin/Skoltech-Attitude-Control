@@ -29,10 +29,12 @@ sat.setControlParams(tMeas = 0.5, ...           % [s] sampling time step
                      kQ = 12, ...               % [N * m / T^2] orientating parameter for PID-regulator
                      kW = 60 / orb.meanMotion)  % [N * m * s / T^2] stabilizing parameter for PID-regulator
 
-% adding a magnetometer
-mtm = Magnetometer(bias = [0; 0; 0;], ...         % [T] magnetometer bias
-                   sigma = 1e-7, ...              % [T] magnetometer measurement deviation
-                   position = [2; 2; -3] * 1e-2); % [m] magnetometer position in the body-frame
+% adding a gyroscope
+gyro = Gyroscope(bias = [0; 0; 0;], ...         % [s^-1] gyroscope bias
+                 sigma = 1e-5);                   % [s^-1] gyroscope measurement deviatio
+                  
+
+sat.setGyroscope(gyro);
 
 sat.setMagnetometer(mtm);
 
