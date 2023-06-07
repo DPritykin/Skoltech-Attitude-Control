@@ -69,7 +69,7 @@ classdef KalmanFilter < handle
             Hx = [Hx_B ; Hx_w];
 
             H = this.calcObservationMatrix (Hx);
-            K = this.calcKalmanGain(predictedP, H, bModelNorm,omegaNorm);
+            K = this.calcKalmanGain(predictedP, H, bModelNorm);
 
             correctedX = K * (z - Hx);
             qCor = vec2unitQuat(correctedX(1:3));
@@ -126,7 +126,7 @@ classdef KalmanFilter < handle
             H = [2 * skewSymm(bModel),zeros(3);zeros(3)  eye(3)];
         end
 
-        function K = calcKalmanGain(this, P, H, bModelNorm,omegaNorm)
+        function K = calcKalmanGain(this, P, H, bModelNorm)
              S = H * P * H' + this.R / [(bModelNorm^2)*eye(3) , zeros(3) ; zeros(3) , eye(3)];
 
             K =  P * H' / S;
