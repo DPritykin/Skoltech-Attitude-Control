@@ -208,7 +208,12 @@ classdef Simulation < handle
                 t0 = t - this.sat.controlParams.tLoop;
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
-                omegaSensor = this.sat.gyro.getSensorReadings(omega0);
+                
+                if ~isempty(this.sat.gyro)  
+                    omegaSensor = this.sat.gyro.getSensorReadings(omega0);
+                elseif isempty(this.sat.gyro)
+                    omegaSensor = 0;
+                end
                 
                 stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,omegaSensor);
                 qEst = stateEst(1:4);
