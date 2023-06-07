@@ -38,7 +38,7 @@ sat.setMagnetometer(mtm);
 
 % adding a gyroscope
 gyro = Gyroscope(bias = [0; 0; 0;], ...         % [s^-1] gyroscope bias
-                 sigma = 1e-5);                   % [s^-1] gyroscope measurement deviation
+                 sigma = 1.45e-6);                   % [rad/s] gyroscope measurement deviation (0.3 deg/hr: STIM 377H Gyro)
                   
 
 sat.setGyroscope(gyro);
