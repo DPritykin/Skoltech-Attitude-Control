@@ -59,17 +59,16 @@ classdef KalmanFilter < handle
         function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor,omegaSensor)
             bModelBody = quatRotate(predictedX(1:4), bModelT);
             bModelNorm = vecnorm(bModelBody);
-            omegaNorm = vecnorm(omegaSensor);
-
+           
             b_meas = bSensor / bModelNorm;
-            w_meas = omegaSensor / omegaNorm;
+            w_meas = omegaSensor;
             z = [b_meas ; w_meas];
              
             Hx_B = [bModelBody / bModelNorm];
-            Hx_w = [omegaSensor / omegaNorm];
+            Hx_w = predictedX(5:7);
             Hx = [Hx_B ; Hx_w];
 
-            H = this.calcObservationMatrix (Hx_B,Hx_w);
+            H = this.calcObservationMatrix (Hx);
             K = this.calcKalmanGain(predictedP, H, bModelNorm,omegaNorm);
 
             correctedX = K * (z - Hx);
@@ -123,12 +122,12 @@ classdef KalmanFilter < handle
             Phi =  eye(6) + F * this.sat.controlParams.tLoop;
         end
 
-        function H = calcObservationMatrix(this, bModel,omegaSensor)
-            H = [2 * skewSymm(bModel),zeros(3);zeros(3)  skewSymm(omegaSensor)];
+        function H = calcObservationMatrix(this, bModel)
+            H = [2 * skewSymm(bModel),zeros(3);zeros(3)  eye(3)];
         end
 
         function K = calcKalmanGain(this, P, H, bModelNorm,omegaNorm)
-             S = H * P * H' + this.R / [(bModelNorm^2)*eye(3) , zeros(3) ; zeros(3) , (omegaNorm^2)*eye(3)];
+             S = H * P * H' + this.R / [(bModelNorm^2)*eye(3) , zeros(3) ; zeros(3) , eye(3)];
 
             K =  P * H' / S;
         end
