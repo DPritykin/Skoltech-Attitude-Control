@@ -1,3 +1,9 @@
+% An example of a satellite (3U CubeSat) in a circular orbit
+% required attitude - orbital
+% adcs sensor - none
+% adcs actuators - 3 reaction wheels
+% adcs state determination - none
+
 clc
 clear
 

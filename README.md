@@ -17,3 +17,7 @@ https://doi.org/10.1016/j.actaastro.2016.11.045
 2. bDotExample.m
 
 A satellite in the circular orbit that uses magnetorquers to damp its initial rotation
+
+3. rwControlExample
+
+A satellite in the circular orbit that uses reaction wheels to come to the orbital orientation
