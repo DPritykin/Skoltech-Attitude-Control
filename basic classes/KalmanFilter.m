@@ -87,7 +87,7 @@ classdef KalmanFilter < handle
             G = [zeros(3); this.sat.invJ];
             D = eye(3) * distTorqueSigma^2;
 
-            this.Q = G * D * G' * this.sat.controlParams.tCtrl;
+            this.Q = G * D * G' * this.sat.controlParams.tLoop;
         end
 
         function initMeasurementsCovariance(this)
