@@ -60,13 +60,15 @@ classdef KalmanFilter < handle
             bModelBody = quatRotate(predictedX(1:4), bModelT);
             bModelNorm = vecnorm(bModelBody);
            
-            b_meas = bSensor / bModelNorm;
-            w_meas = omegaSensor;
-            z = [b_meas ; w_meas];
-             
-            Hx_B = [bModelBody / bModelNorm];
-            Hx_w = predictedX(5:7);
-            Hx = [Hx_B ; Hx_w];
+            if ~isempty(this.sat.gyro) 
+                z = [bSensor / bModelNorm ; omegaSensor]; 
+                Hx = [bModelBody / bModelNorm ; predictedX(5:7)];        
+            
+            elseif isempty(this.sat.gyro) 
+                 z = bSensor / bModelNorm;
+                 Hx = bModelBody / bModelNorm; 
+                 
+            end   
 
             H = this.calcObservationMatrix (Hx);
             K = this.calcKalmanGain(predictedP, H, bModelNorm);
@@ -96,8 +98,13 @@ classdef KalmanFilter < handle
         end
 
         function initMeasurementsCovariance(this)
-            this.R = [diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma), zeros(3);
-                      zeros(3) diag(this.sat.gyro.noiseSigma .* this.sat.gyro.noiseSigma)] ;
+            if ~isempty(this.sat.gyro)  
+                this.R = [diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma), zeros(3);
+                      zeros(3) diag(this.sat.gyro.noiseSigma .* this.sat.gyro.noiseSigma)];
+
+            elseif isempty(this.sat.gyro) 
+                this.R = diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma);
+            end
         end
 
         function Phi = calcEvolutionMatrix(this, state, bModel, mCtrl)
@@ -123,11 +130,21 @@ classdef KalmanFilter < handle
         end
 
         function H = calcObservationMatrix(this, bModel)
-            H = [2 * skewSymm(bModel),zeros(3);zeros(3)  eye(3)];
+            if ~isempty(this.sat.gyro)
+                H = [2 * skewSymm(bModel) zeros(3);zeros(3) eye(3)];  
+
+            elseif isempty(this.sat.gyro)
+                 H = [2*skewSymm(bModel),zeros(3)];                     
+            end
         end
 
         function K = calcKalmanGain(this, P, H, bModelNorm)
-             S = H * P * H' + this.R / [(bModelNorm^2)*eye(3) , zeros(3) ; zeros(3) , eye(3)];
+             if ~isempty(this.sat.gyro)
+                S = H * P * H' + this.R / [(bModelNorm^2)*eye(3) , zeros(3) ; zeros(3) , eye(3)]; 
+                 
+            elseif isempty(this.sat.gyro) 
+                S = H * P * H' + this.R / bModelNorm^2;
+            end
 
             K =  P * H' / S;
         end
