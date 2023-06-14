@@ -86,7 +86,7 @@ function plotResults(simData)
     hold on
     plot(timeInSeconds, simData(8, 1:end), 'Color', blue, 'LineWidth', 2)
     grid on
-    xlabel('Time in hours')
+    xlabel('Time in seconds')
     ylabel('Angular Velocity Components, [rad/sec]')
     legend('\omega_1','\omega_2','\omega_3');
        
@@ -99,7 +99,7 @@ function plotResults(simData)
     hold on
     plot(timeInSeconds, simData(5, 1:end), 'Color', blue, 'LineWidth', 2)
     grid on
-    xlabel('Time in hours')
+    xlabel('Time in seconds')
     ylabel('Quaternion Components')
     legend('q0','q1','q2','q3');
 end

@@ -197,7 +197,7 @@ classdef Simulation < handle
                 %% control torque for the next control loop
                 ez_b = quatRotate(q0, [0; 0; 1]);
                 trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
-                externalTorqueToCompensate = trqGrav - - crossProduct(omega0, (this.sat.J) * omega0);
+                externalTorqueToCompensate = trqGrav - - crossProduct(omega0, (this.sat.J) * omega0 + rwAngMomentum0);
                 rwCtrl = this.sat.calcRwControl(q0, omega0, rwAngMomentum0, externalTorqueToCompensate);
 
                 simResults(:, iterIdx) = [t; q0; omega0; rwAngMomentum0];
@@ -213,23 +213,20 @@ classdef Simulation < handle
                 simulationType SimulationType = SimulationType.noControl;
             end
 
-            switch simulationType
-                case SimulationType.noControl
-                    mCtrl = [0; 0; 0];
-                    rwCtrl = [0; 0; 0];                
-                case SimulationType.rwControl
-                    mCtrl = [0; 0; 0];
-                    rwCtrl = ctrlAction;
-                otherwise
-                    mCtrl = ctrlAction;
-                    rwCtrl = [0; 0; 0];
-            end
-
-            envB = this.calcEnvMagnField(timeInterval(1), initialConditions(1:4));
             distTorque = this.env.getDisturbanceTorque();
 
-            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, envB, mCtrl, rwCtrl, distTorque), ...
-                                    timeInterval, initialConditions, this.odeOptions);
+            switch simulationType
+                case SimulationType.noControl
+                    ctrlTorque = [0; 0; 0];
+                case SimulationType.rwControl
+                    ctrlTorque = ctrlAction;
+                case {SimulationType.bDotControl, SimulationType.fullMagneticControl}
+                    envB = this.calcEnvMagnField(timeInterval(1), initialConditions(1:4));
+                    ctrlTorque = crossProduct(ctrlAction, envB);
+            end
+
+            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, ctrlTorque, distTorque), ...
+                                    timeInterval, initialConditions, this.odeOptions);            
         end
 
         function envMagnField = calcEnvMagnField(this, t, q)

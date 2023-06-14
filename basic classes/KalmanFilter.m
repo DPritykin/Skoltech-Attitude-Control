@@ -40,13 +40,14 @@ classdef KalmanFilter < handle
 
             % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
-            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel, mCtrl), ...
+            ctrlTorque = crossProduct(mCtrl, bModel);
+            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, ctrlTorque), ...
                                     timeInterval, x0, this.odeOptions);
 
             % magnetorquers off
             x0 = stateVec(end, 1:7)';
             timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
-            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel), ...
+            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
                                     timeInterval, x0, this.odeOptions);
 
             predictedX = stateVec(end, 1:7)';
