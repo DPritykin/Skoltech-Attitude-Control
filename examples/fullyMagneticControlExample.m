@@ -6,6 +6,7 @@
 
 clc
 clear
+addpath('C:\Users\HOOR BANO\Desktop\Skoltech\Thesis\MATLAB Files\Skoltech-Attitude-Control-main\basic classes\Sun_Vector');
 
 %% environment settings 
 
@@ -35,6 +36,14 @@ mtm = Magnetometer(bias = [0; 0; 0;], ...         % [T] magnetometer bias
                    position = [2; 2; -3] * 1e-2); % [m] magnetometer position in the body-frame
 
 sat.setMagnetometer(mtm);
+
+% adding a sun sensor 
+ss = SunSensor(bias = [0; 0; 0;], ...             % [T] magnetometer bias
+               sigma = 1e-7, ...                  % [T] magnetometer measurement deviation
+               position = [2; 2; -3] * 1e-2);     % [m] magnetometer position in the body-frame
+
+sat.setSunSensor(ss);
+
 
 % defining a magnetorquer
 mtq = Magnetorquer(area = 0.05^2, ...             % [m^2] area of a coil
