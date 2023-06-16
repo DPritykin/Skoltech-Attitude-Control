@@ -28,11 +28,11 @@ classdef KalmanFilter < handle
             this.initMeasurementsCovariance();
         end
 
-        function estimatedX = estimate(this, t0, x0, mCtrl, bModel0, bmodelT, bSensor)
+        function estimatedX = estimate(this, t0, x0, mCtrl, bModel0, bmodelT, bSensor,SS_Vec0,SS_VecT,VecSS)
 
             [predictedX, predictedP] = this.prediction(t0, x0, bModel0, mCtrl);
 
-            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor);
+            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor,SS_VecT,VecSS);
         end
 
         function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, mCtrl)
@@ -57,14 +57,20 @@ classdef KalmanFilter < handle
             predictedP = Phi * this.P * Phi' + this.Q;
         end
 
-        function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor)
+        function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor,SS_VecT,VecSS)
             bModelBody = quatRotate(predictedX(1:4), bModelT);
             bModelNorm = vecnorm(bModelBody);
 
-            z = bSensor / bModelNorm;
-            Hx = bModelBody / bModelNorm;
+            if ~isempty(this.sat.ss) 
+                z = [bSensor / bModelNorm ; VecSS/norm(VecSS)]; 
+                Hx = [bModelBody / bModelNorm ; SS_VecT/norm(SS_VecT)];        
+            
+            elseif isempty(this.sat.ss)
+                z = bSensor / bModelNorm;
+                Hx = bModelBody / bModelNorm;
+            end 
 
-            H = this.calcObservationMatrix (Hx);
+            H = this.calcObservationMatrix(Hx);
             K = this.calcKalmanGain(predictedP, H, bModelNorm);
 
             correctedX = K * (z - Hx);
@@ -92,7 +98,13 @@ classdef KalmanFilter < handle
         end
 
         function initMeasurementsCovariance(this)
-            this.R = diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma);
+            if ~isempty(this.sat.ss)  
+                this.R = [diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma), zeros(3);
+                      zeros(3) diag(this.sat.ss.noiseSigma .* this.sat.ss.noiseSigma)];
+
+            elseif isempty(this.sat.ss) 
+                this.R = diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma);
+            end 
         end
 
         function Phi = calcEvolutionMatrix(this, state, bModel, mCtrl)
@@ -118,7 +130,12 @@ classdef KalmanFilter < handle
         end
 
         function H = calcObservationMatrix(this, bModel)
-            H = [2 * skewSymm(bModel), zeros(3)];
+            if ~isempty(this.sat.ss)
+                H = [2 * skewSymm(bModel) zeros(3); zeros(3) eye(3)];  
+
+            elseif isempty(this.sat.ss)
+                H = [2 * skewSymm(bModel), zeros(3)];
+            end 
         end
 
         function K = calcKalmanGain(this, P, H, bModelNorm)

@@ -41,6 +41,14 @@ classdef CircularOrbit < handle
             eVel = raanMatrix * inclMatrix * argLatMatrix * [0; 1; 0];
         end
 
+        function TransformedMat = Transform(this, argLat)
+            [ePos,eVel] = this.calcUnitPosVel(argLat);
+            radialAxis = ePos/ norm(ePos);
+            inTrackAxis = eVel/ norm(eVel);  
+            crossTrackAxis = cross(radialAxis, inTrackAxis);
+            TransformedMat = [radialAxis'; inTrackAxis'; crossTrackAxis'];
+        end 
+
         function orb2eciMatrix = orb2eci(this, argLat)
             [ePos, eVel] = this.calcUnitPosVel(argLat);
 

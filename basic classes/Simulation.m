@@ -111,14 +111,26 @@ classdef Simulation < handle
                 t = simTime;
                 q0 = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
                 omega0 = stateVec(end, 5:7)';
+
                 mtmMeasuredField = this.calcSensorMagnField(t, q0);
+                ssMeasuredVector = this.calcSSVector(t,q0);
 
                 %% state estimation (Extended Kalman filter)
                 t0 = t - this.sat.controlParams.tLoop;
+
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
 
-                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField);
+                SS_Vec0_icrs = this.env.SunVecCalc(t0);
+                SS_VecT_icrs = this.env.SunVecCalc(t);
+
+                Transformed0 = this.orb.Transform(this.orb.meanMotion * t0);
+                TransformedT = this.orb.Transform(this.orb.meanMotion * t);
+
+                SS_Vec0 = Transformed0 * SS_Vec0_icrs;
+                SS_VecT = TransformedT * SS_VecT_icrs;
+
+                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,ssMeasuredVector,SS_Vec0,SS_VecT);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
 
@@ -160,6 +172,11 @@ classdef Simulation < handle
                 %% measurements
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
                 bSensor = this.sat.mtm.getSensorReadings(quatRotate(q0, bmodelT));
+
+                SS_VecT_icrs = this.env.SunVecCalc(t);
+                SS_VecT = TransformedT * SS_VecT_icrs;
+                VecSS = this.sat.ss.getSensorReadings(quatRotate(q0, SS_VecT));
+
                 omegaSensor = this.sat.gyro.getSensorReadings(omega0);
 
                 %% control moment for the next control loop (based on the measurements)                
@@ -241,5 +258,15 @@ classdef Simulation < handle
             envMagnField = this.calcEnvMagnField(t, q);
             sensedMagnField = this.sat.mtm.getSensorReadings(envMagnField);
         end
+
+        function sensedSunVec = calcSSVector(this, t, q)
+
+            TransformedT = this.orb.Transform(this.orb.meanMotion * t);
+            SunVec_icrs = this.env.SunVecCalc(t);
+            SunVec = TransformedT * SunVec_icrs;
+            sensedSunVec = this.sat.ss.getSensorReadings(SunVec);
+        end
     end
 end
+    
+           
