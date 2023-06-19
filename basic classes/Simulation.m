@@ -124,8 +124,8 @@ classdef Simulation < handle
                 SS_Vec0_icrs = this.env.SunVecCalc(t0);
                 SS_VecT_icrs = this.env.SunVecCalc(t);
 
-                Transformed0 = this.orb.Transform(this.orb.meanMotion * t0);
-                TransformedT = this.orb.Transform(this.orb.meanMotion * t);
+                Transformed0 = this.orb.eci2orb(this.orb.meanMotion * t0);
+                TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
 
                 SS_Vec0 = Transformed0 * SS_Vec0_icrs;
                 SS_VecT = TransformedT * SS_VecT_icrs;
@@ -261,10 +261,11 @@ classdef Simulation < handle
 
         function sensedSunVec = calcSSVector(this, t, q)
 
-            TransformedT = this.orb.Transform(this.orb.meanMotion * t);
+            TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
             SunVec_icrs = this.env.SunVecCalc(t);
             SunVec = TransformedT * SunVec_icrs;
             sensedSunVec = this.sat.ss.getSensorReadings(SunVec);
+            
         end
     end
 end

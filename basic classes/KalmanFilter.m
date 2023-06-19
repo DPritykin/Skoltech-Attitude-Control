@@ -70,7 +70,7 @@ classdef KalmanFilter < handle
                 Hx = bModelBody / bModelNorm;
             end 
 
-            H = this.calcObservationMatrix(Hx);
+            H = this.calcObservationMatrix(bModelBody/bModelNorm,SS_VecT/norm(SS_VecT));
             K = this.calcKalmanGain(predictedP, H, bModelNorm);
 
             correctedX = K * (z - Hx);
@@ -129,9 +129,9 @@ classdef KalmanFilter < handle
             Phi =  eye(6) + F * this.sat.controlParams.tLoop;
         end
 
-        function H = calcObservationMatrix(this, bModel)
+        function H = calcObservationMatrix(this, bModel,Svec)
             if ~isempty(this.sat.ss)
-                H = [2 * skewSymm(bModel) zeros(3); zeros(3) eye(3)];  
+                H = [2 * skewSymm(bModel) zeros(3); 2*skewSymm(Svec) zeros(3)];  
 
             elseif isempty(this.sat.ss)
                 H = [2 * skewSymm(bModel), zeros(3)];
