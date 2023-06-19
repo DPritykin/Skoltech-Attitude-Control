@@ -71,7 +71,7 @@ classdef KalmanFilter < handle
             end 
 
             H = this.calcObservationMatrix(bModelBody/bModelNorm,SS_VecT/norm(SS_VecT));
-            K = this.calcKalmanGain(predictedP, H, bModelNorm);
+            K = this.calcKalmanGain(predictedP, H, bModelNorm,norm(VecSS));
 
             correctedX = K * (z - Hx);
             qCor = vec2unitQuat(correctedX(1:3));
@@ -100,7 +100,7 @@ classdef KalmanFilter < handle
         function initMeasurementsCovariance(this)
             if ~isempty(this.sat.ss)  
                 this.R = [diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma), zeros(3);
-                      zeros(3) diag(this.sat.ss.noiseSigma .* this.sat.ss.noiseSigma)];
+                          diag(this.sat.ss.noiseSigma .* this.sat.ss.noiseSigma) zeros(3)];
 
             elseif isempty(this.sat.ss) 
                 this.R = diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma);
@@ -138,8 +138,8 @@ classdef KalmanFilter < handle
             end 
         end
 
-        function K = calcKalmanGain(this, P, H, bModelNorm)
-            S = H * P * H' + this.R / bModelNorm^2;
+        function K = calcKalmanGain(this, P, H, bModelNorm, SSnorm)
+            S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)/SSnorm^2];
 
             K =  P * H' / S;
         end
