@@ -39,7 +39,7 @@ sat.setMagnetometer(mtm);
 
 % adding a sun sensor 
 ss = SunSensor(bias = [0; 0; 0;], ...             % [rad] sun sensor bias
-               sigma = deg2rad(0.02), ...          % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
+               sigma = deg2rad(0.2), ...          % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
                position = [2; 2; -3] * 1e-2);     % [m] sun sensor position in the body-frame
 
 sat.setSunSensor(ss);
