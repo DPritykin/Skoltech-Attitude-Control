@@ -39,7 +39,7 @@ sat.setMagnetometer(mtm);
 
 % adding a sun sensor 
 ss = SunSensor(bias = [0; 0; 0;], ...             % [rad] sun sensor bias
-               sigma = deg2rad(0.2), ...          % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
+               sigma = deg2rad(0.02), ...          % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
                position = [2; 2; -3] * 1e-2);     % [m] sun sensor position in the body-frame
 
 sat.setSunSensor(ss);
@@ -67,7 +67,7 @@ ekf = KalmanFilter(sat = sat, ...      % Satellite object
 
 %% simulation settings
 
-simulationTime = 8 * 3600;
+simulationTime = 1 * 3600;
 sim = Simulation(simulationTime);
 
 sim.setEnvironment(env);
@@ -114,7 +114,7 @@ function plotResults(simData, meanMotion)
     hold on
     plot(timeInHours, yaw, 'Color', blue, 'LineWidth', 2)
     grid on
-    xlabel('Time in seconds')
+    xlabel('Time in hours')
     ylabel('Euler Angles, [deg]')
     legend('pitch','roll','yaw');
     
