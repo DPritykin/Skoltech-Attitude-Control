@@ -16,11 +16,11 @@ env = Environment(distTorqueSigma = 3e-9, ...  % [N * m] disturbance of the torq
 
 orb = CircularOrbit(env, ... % Environment object
                     470, ... % [km] circular orbit altitude
-                    52);     % [deg] orbit inclination
+                    98);     % [deg] orbit inclination
 
 %% satellite settings
 
-sat = Satellite(diag([0.015 0.014 0.007])); % [kg * m^2] inertia tensor for satellite
+sat = Satellite([54.66 -0.04 -0.06; -0.04 55.31 0.29; -0.06 0.29 12.01]/1000); % [ kg * m^2] inertia tensor for Sk-B1
 
 % defining control parameters
 sat.setControlParams(tMeas = 0.5, ...           % [s] sampling time step
@@ -61,7 +61,8 @@ ekf = KalmanFilter(sat = sat, ...      % Satellite object
                    orb = orb, ...      % CircularOrbit object 
                    env = env, ...      % Environment object
                    sigmaQ0 = 1, ...    % variance to initialize the error covariance matrix (quaternion part)
-                   sigmaOmega0 = 0.1); % variance to initialize the error covariance matrix (omega part)
+                   sigmaOmega0 = 0.1, ... % variance to initialize the error covariance matrix (omega part)
+                   sigmaBias0_mtm = 10e-5); % variance to initialize the error covariance matrix (bias part-mtm) [Ref: Annenkova et. al]
 
 %% simulation settings
 
