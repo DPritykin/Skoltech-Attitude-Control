@@ -19,12 +19,13 @@ classdef KalmanFilter < handle
                 options.env
                 options.sigmaQ0 {mustBeNumeric} = []
                 options.sigmaOmega0 {mustBeNumeric} = []
+                options.sigmaBias0_mtm {mustBeNumeric} = []
             end
 
             this.sat = options.sat;
             this.orb = options.orb;
             this.initProcessCovariance(options.env.distTorqueSigma);
-            this.initErrorCovariance(options.sigmaQ0, options.sigmaOmega0);
+            this.initErrorCovariance(options.sigmaQ0, options.sigmaOmega0,options.sigmaBias0_mtm);
             this.initMeasurementsCovariance();
         end
 
@@ -37,7 +38,10 @@ classdef KalmanFilter < handle
 
         function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, mCtrl)
             bModel = quatRotate(x0(1:4), bModel0);
-
+            
+            % Bias Prediction
+            PredictedBias_mtm = x0(8:10); % Bias taken as constant
+            
             % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel, mCtrl), ...
@@ -49,7 +53,7 @@ classdef KalmanFilter < handle
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel), ...
                                     timeInterval, x0, this.odeOptions);
 
-            predictedX = stateVec(end, 1:7)';
+            predictedX = [stateVec(end, 1:7)' ; PredictedBias_mtm];
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
 
             Phi = this.calcEvolutionMatrix(x0, bModel, mCtrl);
@@ -62,11 +66,11 @@ classdef KalmanFilter < handle
            
             if ~isempty(this.sat.gyro) 
                 z = [bSensor / bModelNorm ; omegaSensor]; 
-                Hx = [bModelBody / bModelNorm ; predictedX(5:7)];        
+                Hx = [bModelBody / bModelNorm + predictedX(8:10) ; predictedX(5:7)];        
             
             elseif isempty(this.sat.gyro) 
                  z = bSensor / bModelNorm;
-                 Hx = bModelBody / bModelNorm; 
+                 Hx = [bModelBody / bModelNorm + predictedX(8:10)]; 
                  
             end   
 
@@ -79,6 +83,7 @@ classdef KalmanFilter < handle
             estimatedX = zeros(6, 1);
             estimatedX(1:4) = quatProduct(predictedX(1:4), qCor);
             estimatedX(5:7) = predictedX(5:7) + correctedX(4:6);
+            estimatedX(8:10) = predictedX(8:10) + correctedX(7:9);
 
             this.P = (eye(6) - K * H) * predictedP;
         end
@@ -86,12 +91,12 @@ classdef KalmanFilter < handle
 
     methods (Access = private)
 
-        function initErrorCovariance(this, sigmaQ0, sigmaOmega0)
-            this.P = blkdiag(eye(3) * sigmaQ0^2, eye(3) * sigmaOmega0^2);
+        function initErrorCovariance(this, sigmaQ0, sigmaOmega0, sigmaBias0_mtm)
+            this.P = blkdiag(eye(3) * sigmaQ0^2, eye(3) * sigmaOmega0^2, eye(3)*sigmaBias0_mtm);
         end
 
         function initProcessCovariance(this, distTorqueSigma)
-            G = [zeros(3); this.sat.invJ];
+            G = [zeros(3); this.sat.invJ; zeros(3)];
             D = eye(3) * distTorqueSigma^2;
 
             this.Q = G * D * G' * this.sat.controlParams.tCtrl;
@@ -123,18 +128,19 @@ classdef KalmanFilter < handle
 
             F1 = [-skewSymm(omegaRel), 0.5 * eye(3)];
             F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr];
+            F3 = [zeros(3), zeros(3), zeros(3)]; 
+            
+            F = [F1; F2; F3];
 
-            F = [F1; F2];
-
-            Phi =  eye(6) + F * this.sat.controlParams.tLoop;
+            Phi =  eye(9) + F * this.sat.controlParams.tLoop;
         end
 
         function H = calcObservationMatrix(this, bModel)
             if ~isempty(this.sat.gyro)
-                H = [2 * skewSymm(bModel) zeros(3);zeros(3) eye(3)];  
+                H = [2 * skewSymm(bModel) zeros(3) eye(3); zeros(3) eye(3) zeros(3)];  
 
             elseif isempty(this.sat.gyro)
-                 H = [2*skewSymm(bModel),zeros(3)];                     
+                 H = [2*skewSymm(bModel),zeros(3),eye(3)];                     
             end
         end
 
