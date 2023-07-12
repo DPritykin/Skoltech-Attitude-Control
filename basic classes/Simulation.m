@@ -90,10 +90,12 @@ classdef Simulation < handle
             
             stateEst = [1; 0; 0; 0; 0; 0; 0;]; % Initialization [q;w]
             mtm_bias = rand(3,1); % Initializing mtm bias 
-            stateEst = [stateEst; mtm_bias]; % Initialization [q;w;b_mtm]
+            gyro_bias = rand(3,1); % Initializin gyro bias
+            
+            stateEst = [stateEst; mtm_bias; gyro_bias]; % Initialization [q;w;b_mtm;b_gyro]
             
             simResults = zeros(8, ceil(this.simulationTime / this.sat.controlParams.tLoop));
-            ekfResults = zeros(11, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            ekfResults = zeros(14, ceil(this.simulationTime / this.sat.controlParams.tLoop));
              
             for iterIdx = 1:size(simResults, 2)
 
@@ -135,8 +137,9 @@ classdef Simulation < handle
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
                 mtm_biasEst = stateEst(8:10);
-
-                ekfResults(:,iterIdx) = [t ; qEst; omegaEst; mtm_biasEst];
+                gyro_biasEst = stateEst(11:13);
+                
+                ekfResults(:,iterIdx) = [t ; qEst; omegaEst; mtm_biasEst; gyro_biasEst];
 
                 %% control moment for the next control loop (based on the Kalman estimate of the state)                
                 omegaRel = omegaEst - quatRotate(qEst, [0; this.orb.meanMotion; 0]);
