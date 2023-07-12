@@ -140,8 +140,19 @@ function rmse_ekf = comparison_plots(simData,ekfData,meanMotion)
     ylabel('Magnetometer Bias [T]')
     legend('b_x','b_y','b_z');
     title('Magnetometer Bias Estimation')
-   
-    
+
+    figure;
+    plot(timeInHours, ekfData(12,1:end),'Color', red, 'LineWidth', 2)
+    hold on
+    plot(timeInHours, ekfData(13,1:end), 'Color', green, 'LineWidth', 2)
+    hold on
+    plot(timeInHours, ekfData(14,1:end), 'Color', blue, 'LineWidth', 2)
+    grid on
+    xlabel('Time in hours')
+    ylabel('Gyroscope Bias [rad/s]')
+    legend('b_x','b_y','b_z');
+    title('Gyroscope Bias Estimation')
+
     rmse_ekf = [rmseRoll rmsePitch rmseYaw rmseW1 rmseW2 rmseW3];
 
 end
