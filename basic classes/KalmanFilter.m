@@ -20,12 +20,13 @@ classdef KalmanFilter < handle
                 options.sigmaQ0 {mustBeNumeric} = []
                 options.sigmaOmega0 {mustBeNumeric} = []
                 options.sigmaBias0_mtm {mustBeNumeric} = []
+                options.sigmaBias0_gyro {mustBeNumeric} = []
             end
 
             this.sat = options.sat;
             this.orb = options.orb;
             this.initProcessCovariance(options.env.distTorqueSigma);
-            this.initErrorCovariance(options.sigmaQ0, options.sigmaOmega0,options.sigmaBias0_mtm);
+            this.initErrorCovariance(options.sigmaQ0, options.sigmaOmega0,options.sigmaBias0_mtm,options.sigmaBias0_gyro);
             this.initMeasurementsCovariance();
         end
 
@@ -41,19 +42,20 @@ classdef KalmanFilter < handle
             
             % Bias Prediction
             PredictedBias_mtm = x0(8:10); % Bias taken as constant
-            
+            PredictedBias_gyro = x0(11:13); 
+             
             % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel, mCtrl), ...
-                                    timeInterval, x0, this.odeOptions);
+                                    timeInterval, x0(1:7), this.odeOptions);
 
             % magnetorquers off
             x0 = stateVec(end, 1:7)';
             timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel), ...
-                                    timeInterval, x0, this.odeOptions);
+                                    timeInterval, x0(1:7), this.odeOptions);
 
-            predictedX = [stateVec(end, 1:7)' ; PredictedBias_mtm];
+            predictedX = [stateVec(end, 1:7)' ; PredictedBias_mtm; PredictedBias_gyro];
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
 
             Phi = this.calcEvolutionMatrix(x0, bModel, mCtrl);
@@ -66,7 +68,7 @@ classdef KalmanFilter < handle
            
             if ~isempty(this.sat.gyro) 
                 z = [bSensor / bModelNorm ; omegaSensor]; 
-                Hx = [bModelBody / bModelNorm + predictedX(8:10) ; predictedX(5:7)];        
+                Hx = [bModelBody / bModelNorm + predictedX(8:10) ; predictedX(5:7)+ predictedX(11:13)];        
             
             elseif isempty(this.sat.gyro) 
                  z = bSensor / bModelNorm;
@@ -80,23 +82,24 @@ classdef KalmanFilter < handle
             correctedX = K * (z - Hx);
             qCor = vec2unitQuat(correctedX(1:3));
             
-            estimatedX = zeros(6, 1);
+            estimatedX = zeros(12, 1);
             estimatedX(1:4) = quatProduct(predictedX(1:4), qCor);
             estimatedX(5:7) = predictedX(5:7) + correctedX(4:6);
             estimatedX(8:10) = predictedX(8:10) + correctedX(7:9);
-
-            this.P = (eye(6) - K * H) * predictedP;
+            estimatedX(11:13) = predictedX(11:13) + correctedX(10:12);
+            
+            this.P = (eye(12) - K * H) * predictedP;
         end
     end
 
     methods (Access = private)
 
-        function initErrorCovariance(this, sigmaQ0, sigmaOmega0, sigmaBias0_mtm)
-            this.P = blkdiag(eye(3) * sigmaQ0^2, eye(3) * sigmaOmega0^2, eye(3)*sigmaBias0_mtm);
+        function initErrorCovariance(this, sigmaQ0, sigmaOmega0, sigmaBias0_mtm, sigmaBias0_gyro)
+            this.P = blkdiag(eye(3) * sigmaQ0^2, eye(3) * sigmaOmega0^2, eye(3)*sigmaBias0_mtm, eye(3)*sigmaBias0_gyro);
         end
 
         function initProcessCovariance(this, distTorqueSigma)
-            G = [zeros(3); this.sat.invJ; zeros(3)];
+            G = [zeros(3); this.sat.invJ; zeros(3); zeros(3)];
             D = eye(3) * distTorqueSigma^2;
 
             this.Q = G * D * G' * this.sat.controlParams.tCtrl;
@@ -126,18 +129,18 @@ classdef KalmanFilter < handle
 
             Fmagn = 2 * skewSymm(mCtrl) * skewSymm(bModel);
 
-            F1 = [-skewSymm(omegaRel), 0.5 * eye(3)];
-            F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr];
-            F3 = [zeros(3), zeros(3), zeros(3)]; 
+            F1 = [-skewSymm(omegaRel), 0.5 * eye(3), zeros(3), zeros(3)];
+            F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr, zeros(3), zeros(3)];
+            F4 = [zeros(3), zeros(3), zeros(3), zeros(3)];
             
-            F = [F1; F2; F3];
+            F = [F1; F2; F3; F4];
 
-            Phi =  eye(9) + F * this.sat.controlParams.tLoop;
+            Phi =  eye(12) + F * this.sat.controlParams.tLoop;
         end
 
         function H = calcObservationMatrix(this, bModel)
             if ~isempty(this.sat.gyro)
-                H = [2 * skewSymm(bModel) zeros(3) eye(3); zeros(3) eye(3) zeros(3)];  
+                   H = [2 * skewSymm(bModel) zeros(3) eye(3) zeros(3);zeros(3) eye(3) zeros(3) eye(3)]; 
 
             elseif isempty(this.sat.gyro)
                  H = [2*skewSymm(bModel),zeros(3),eye(3)];                     
