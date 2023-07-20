@@ -40,9 +40,8 @@ classdef KalmanFilter < handle
         function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, mCtrl)
             bModel = quatRotate(x0(1:4), bModel0);
             
-            % Bias Prediction
-            PredictedBias_mtm = x0(8:10); % Bias taken as constant
-            PredictedBias_gyro = x0(11:13); 
+            PredictedBias_gyro = this.sat.gyro.getGyroBias();
+            PredictedBias_mtm = this.sat.mtm.getMagnetometerBias(); 
              
             % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
@@ -68,11 +67,11 @@ classdef KalmanFilter < handle
            
             if ~isempty(this.sat.gyro) 
                 z = [bSensor / bModelNorm ; omegaSensor]; 
-                Hx = [bModelBody / bModelNorm + predictedX(8:10) ; predictedX(5:7)+ predictedX(11:13)];        
+                Hx = [(bModelBody + predictedX(8:10)) / bModelNorm  ; predictedX(5:7) + predictedX(11:13)];   % magnetometer + gyro          
             
             elseif isempty(this.sat.gyro) 
                  z = bSensor / bModelNorm;
-                 Hx = [bModelBody / bModelNorm + predictedX(8:10)]; 
+                 Hx = (bModelBody + predictedX(8:10)) / bModelNorm ;  % magnetometer only 
                  
             end   
 
