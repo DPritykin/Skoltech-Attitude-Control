@@ -89,8 +89,8 @@ classdef Simulation < handle
             mCtrl = [0; 0; 0];
             
             stateEst = [1; 0; 0; 0; 0; 0; 0;]; % Initialization [q;w]
-            mtm_bias = rand(3,1); % Initializing mtm bias 
-            gyro_bias = rand(3,1); % Initializin gyro bias
+            mtm_bias = zeros(3,1); % Initializing mtm bias 
+            gyro_bias = zeros(3,1); % Initializin gyro bias
             
             stateEst = [stateEst; mtm_bias; gyro_bias]; % Initialization [q;w;b_mtm;b_gyro]
             
