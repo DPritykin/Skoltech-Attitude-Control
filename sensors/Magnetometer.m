@@ -1,6 +1,10 @@
 classdef Magnetometer < AbstractSensor
 
     methods
+       function val = getMagnetometerBias(this)
+            val = randn(3,1); % randomly initialized constant bias
+        end
+        
         function val = getSensorReadings(this, trueValue)
             % trueValue - magnetic field in the satellite body frame
             generatedNoise = normrnd(this.bias, this.noiseSigma, [3, 1]);
