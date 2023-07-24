@@ -96,5 +96,14 @@ classdef Satellite < handle
             maxRatio = max(abs(m) ./ this.mtq.maxMagneticMoment);
             m = m / maxRatio;
         end
+
+            function m = calcResidualDipoleMoment(this)
+            m = [1;1;1]*(10^-3); % constant dipole at satellite centre
+%               m = rand(3,1);
+%               if any(abs(m) > 0.001)
+%                   maxRatio = max(abs(m) ./ 0.001);
+%                   m = m / maxRatio;
+%               end
+        end
     end
 end
