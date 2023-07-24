@@ -62,6 +62,7 @@ ekf = KalmanFilter(sat = sat, ...      % Satellite object
                    env = env, ...      % Environment object
                    sigmaQ0 = 1, ...    % variance to initialize the error covariance matrix (quaternion part)
                    sigmaOmega0 = 0.1, ... % variance to initialize the error covariance matrix (omega part)
+                   sigmaResDipole0 = 0.1,... % variance to initialize the error covariance matrix (residual dipole) [Ref: Annenkova et. al]
                    sigmaBias0_mtm = 10e-5,... % variance to initialize the error covariance matrix (bias part-mtm) [Ref: Annenkova et. al]
                    sigmaBias0_gyro = 10e-4); % variance to initialize the error covariance matrix (bias part-gyro) *assumed
 %% simulation settings
