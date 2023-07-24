@@ -19,6 +19,7 @@ classdef KalmanFilter < handle
                 options.env
                 options.sigmaQ0 {mustBeNumeric} = []
                 options.sigmaOmega0 {mustBeNumeric} = []
+                options.sigmaResDipole0 {mustBeNumeric} = []
                 options.sigmaBias0_mtm {mustBeNumeric} = []
                 options.sigmaBias0_gyro {mustBeNumeric} = []
             end
@@ -26,13 +27,13 @@ classdef KalmanFilter < handle
             this.sat = options.sat;
             this.orb = options.orb;
             this.initProcessCovariance(options.env.distTorqueSigma);
-            this.initErrorCovariance(options.sigmaQ0, options.sigmaOmega0,options.sigmaBias0_mtm,options.sigmaBias0_gyro);
+            this.initErrorCovariance(options.sigmaQ0, options.sigmaOmega0,options.sigmaResDipole0,options.sigmaBias0_mtm,options.sigmaBias0_gyro);
             this.initMeasurementsCovariance();
         end
 
-        function estimatedX = estimate(this, t0, x0, mCtrl, bModel0, bmodelT, bSensor,omegaSensor)
+        function estimatedX = estimate(this, t0, x0, mCtrl, bModel0, bmodelT, bSensor,bInduced,omegaSensor)
 
-            [predictedX, predictedP] = this.prediction(t0, x0, bModel0, mCtrl);
+            [predictedX, predictedP] = this.prediction(t0, x0, bModel0, bInduced, mCtrl);
 
             estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor,omegaSensor);
         end
@@ -40,8 +41,9 @@ classdef KalmanFilter < handle
         function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, mCtrl)
             bModel = quatRotate(x0(1:4), bModel0);
             
-            PredictedBias_gyro = this.sat.gyro.getGyroBias();
-            PredictedBias_mtm = this.sat.mtm.getMagnetometerBias(); 
+            PredictedResDipole = this.sat.calcResidualDipoleMoment();
+            PredictedBias_mtm = this.sat.mtm.getMagnetometerBias(bInduced); %Bias due to induced dipole
+            PredictedBias_gyro = this.sat.gyro.getGyroBias(); 
              
             % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
@@ -54,7 +56,7 @@ classdef KalmanFilter < handle
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel), ...
                                     timeInterval, x0(1:7), this.odeOptions);
 
-            predictedX = [stateVec(end, 1:7)' ; PredictedBias_mtm; PredictedBias_gyro];
+            predictedX = [stateVec(end, 1:7)' ; PredictedResDipole ;PredictedBias_mtm; PredictedBias_gyro];
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
 
             Phi = this.calcEvolutionMatrix(x0, bModel, mCtrl);
@@ -81,24 +83,25 @@ classdef KalmanFilter < handle
             correctedX = K * (z - Hx);
             qCor = vec2unitQuat(correctedX(1:3));
             
-            estimatedX = zeros(12, 1);
-            estimatedX(1:4) = quatProduct(predictedX(1:4), qCor);
-            estimatedX(5:7) = predictedX(5:7) + correctedX(4:6);
-            estimatedX(8:10) = predictedX(8:10) + correctedX(7:9);
-            estimatedX(11:13) = predictedX(11:13) + correctedX(10:12);
-            
-            this.P = (eye(12) - K * H) * predictedP;
+            estimatedX = zeros(15, 1);
+            estimatedX(1:4) = quatProduct(predictedX(1:4), qCor); % quaternion
+            estimatedX(5:7) = predictedX(5:7) + correctedX(4:6);  % angular velocity
+            estimatedX(8:10) = predictedX(8:10) + correctedX(7:9); %  residual dipole
+            estimatedX(11:13) = predictedX(11:13) + correctedX(10:12); % magnetometer bias
+            estimatedX(14:16) = predictedX(14:16) + correctedX(13:15); % magnetometer bias
+
+            this.P = (eye(15) - K * H) * predictedP;
         end
     end
 
     methods (Access = private)
 
-        function initErrorCovariance(this, sigmaQ0, sigmaOmega0, sigmaBias0_mtm, sigmaBias0_gyro)
-            this.P = blkdiag(eye(3) * sigmaQ0^2, eye(3) * sigmaOmega0^2, eye(3)*sigmaBias0_mtm, eye(3)*sigmaBias0_gyro);
+        function initErrorCovariance(this, sigmaQ0, sigmaOmega0,  sigmaResDipole0, sigmaBias0_mtm, sigmaBias0_gyro)
+            this.P = blkdiag(eye(3) * sigmaQ0^2, eye(3) * sigmaOmega0^2, eye(3)*sigmaResDipole0, eye(3)*sigmaBias0_mtm, eye(3)*sigmaBias0_gyro);
         end
 
         function initProcessCovariance(this, distTorqueSigma)
-            G = [zeros(3); this.sat.invJ; zeros(3); zeros(3)];
+            G = [zeros(3); this.sat.invJ; zeros(3); zeros(3); zeros(3)];
             D = eye(3) * distTorqueSigma^2;
 
             this.Q = G * D * G' * this.sat.controlParams.tCtrl;
@@ -128,21 +131,22 @@ classdef KalmanFilter < handle
 
             Fmagn = 2 * skewSymm(mCtrl) * skewSymm(bModel);
 
-            F1 = [-skewSymm(omegaRel), 0.5 * eye(3), zeros(3), zeros(3)];
-            F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr, zeros(3), zeros(3)];
-            F4 = [zeros(3), zeros(3), zeros(3), zeros(3)];
-            
-            F = [F1; F2; F3; F4];
+            F1 = [-skewSymm(omegaRel), 0.5 * eye(3), zeros(3), zeros(3), zeros(3)];
+            F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr, zeros(3), zeros(3), zeros(3)];
+            F3 = [zeros(3), zeros(3), zeros(3), zeros(3), zeros(3)]; % residual magnetization model linearization
+            F4 = [zeros(3), zeros(3), zeros(3), zeros(3), zeros(3)]; % * bias eqn linearization = 0?
+            F5 = [zeros(3), zeros(3), zeros(3), zeros(3), zeros(3)];
+            F = [F1; F2; F3; F4; F5];
 
-            Phi =  eye(12) + F * this.sat.controlParams.tLoop;
+            Phi =  eye(15) + F * this.sat.controlParams.tLoop;
         end
 
         function H = calcObservationMatrix(this, bModel)
             if ~isempty(this.sat.gyro)
-                   H = [2 * skewSymm(bModel) zeros(3) eye(3) zeros(3);zeros(3) eye(3) zeros(3) eye(3)]; 
+                H = [2 * skewSymm(bModel) zeros(3,6) eye(3) zeros(3);zeros(3) eye(3) zeros(3,6) eye(3)]; % magnetometer+gyroscope
 
             elseif isempty(this.sat.gyro)
-                 H = [2*skewSymm(bModel),zeros(3),eye(3)];                     
+                 H = [2*skewSymm(bModel),zeros(3,6),eye(3)];  % only magnetometer             
             end
         end
 
