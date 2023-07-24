@@ -89,13 +89,14 @@ classdef Simulation < handle
             mCtrl = [0; 0; 0];
             
             stateEst = [1; 0; 0; 0; 0; 0; 0;]; % Initialization [q;w]
+            m_res = zeros(3,1); % Initializing residual dipole
             mtm_bias = zeros(3,1); % Initializing mtm bias 
             gyro_bias = zeros(3,1); % Initializin gyro bias
             
-            stateEst = [stateEst; mtm_bias; gyro_bias]; % Initialization [q;w;b_mtm;b_gyro]
+            stateEst = [stateEst; m_res; mtm_bias; gyro_bias]; % Initialization [q;w;m_res;b_mtm;b_gyro]
             
             simResults = zeros(8, ceil(this.simulationTime / this.sat.controlParams.tLoop));
-            ekfResults = zeros(14, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            ekfResults = zeros(17, ceil(this.simulationTime / this.sat.controlParams.tLoop));
              
             for iterIdx = 1:size(simResults, 2)
 
@@ -132,18 +133,20 @@ classdef Simulation < handle
                 elseif isempty(this.sat.gyro)
                     omegaSensor = 0;
                 end
-                
-                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,omegaSensor);
+
+                inducedMagnField = this.calcInducedMagnField();
+                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,inducedMagnField,omegaSensor);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
-                mtm_biasEst = stateEst(8:10);
-                gyro_biasEst = stateEst(11:13);
+                m_resEst = stateEst(8:10);
+                mtm_biasEst = stateEst(11:13);
+                gyro_biasEst = stateEst(14:16);
                 
-                ekfResults(:,iterIdx) = [t ; qEst; omegaEst; mtm_biasEst; gyro_biasEst];
+                ekfResults(:,iterIdx) = [t ; qEst; omegaEst; m_resEst; mtm_biasEst; gyro_biasEst];
 
                 %% control moment for the next control loop (based on the Kalman estimate of the state)                
                 omegaRel = omegaEst - quatRotate(qEst, [0; this.orb.meanMotion; 0]);
-                mCtrl = this.sat.calcControlMagneticMoment(qEst, omegaRel, mtmMeasuredField);
+                mCtrl = this.sat.calcControlMagneticMoment(qEst, omegaRel, mtmMeasuredField, m_resEst);
 
                 simResults(:, iterIdx) = [t; q0; omega0];
             end
@@ -211,6 +214,12 @@ classdef Simulation < handle
         function sensedMagnField = calcSensorMagnField(this, t, q)
             envMagnField = this.calcEnvMagnField(t, q);
             sensedMagnField = this.sat.mtm.getSensorReadings(envMagnField);
+        end
+
+         function inducedMagnField = calcInducedMagnField(this)
+            m_res = this.sat.calcResidualDipoleMoment();
+            r_mtm = this.sat.mtm.position;
+            inducedMagnField = (this.env.mu0/4*pi) * ((3*(dot(m_res,r_mtm)*r_mtm - m_res))/((norm(r_mtm))^3)); % Biot-Savart Law
         end
     end
 end
