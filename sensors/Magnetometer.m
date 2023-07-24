@@ -1,8 +1,8 @@
 classdef Magnetometer < AbstractSensor
 
     methods
-       function val = getMagnetometerBias(this)
-            val = randn(3,1); % randomly initialized constant bias
+       function val = getMagnetometerBias(this, InducedField)
+            val = InducedField; % Induced Bias of the magnetometer
         end
         
         function val = getSensorReadings(this, trueValue)
