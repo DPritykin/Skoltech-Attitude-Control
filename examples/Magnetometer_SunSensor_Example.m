@@ -6,7 +6,6 @@
 
 clc
 clear
-% addpath('C:\Users\HOOR BANO\Desktop\Skoltech\Thesis\MATLAB Files\Skoltech-Attitude-Control-main\math\Sun_Vector');
 
 %% environment settings 
 
@@ -15,7 +14,7 @@ env = Environment(distTorqueSigma = 3e-9, ...  % [N * m] disturbance of the torq
 
 %% orbit settings
 
-orb = CircularOrbit(env, ... % Environment object
+orb = CircularOrbit(env, ... % Envijronment object
                     470, ... % [km] circular orbit altitude
                     52);     % [deg] orbit inclination
 
@@ -40,7 +39,8 @@ sat.setMagnetometer(mtm);
 % adding a sun sensor 
 ss = SunSensor(bias = [0; 0; 0;], ...             % [rad] sun sensor bias
                sigma = deg2rad(0.2), ...          % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
-               position = [2; 2; -3] * 1e-2);     % [m] sun sensor position in the body-frame
+               position = [2; 2; -3] * 1e-2, ...  % [m] sun sensor position in the body-frame
+               fov = 120);                        % [deg] sun sensor field of view constraint 
 
 sat.setSunSensor(ss);
 
@@ -67,7 +67,7 @@ ekf = KalmanFilter(sat = sat, ...      % Satellite object
 
 %% simulation settings
 
-simulationTime = 1 * 3600;
+simulationTime = 5 * 3600;
 sim = Simulation(simulationTime);
 
 sim.setEnvironment(env);
@@ -169,4 +169,10 @@ function plotResults(simData, meanMotion)
     xlabel('Time in hours')
     ylabel('Quaternion Components')
     legend('q0','q1','q2','q3');
+
+    subplot(2, 3, 6) % Sun Sensor Intensity
+    plot(timeInHours, simData(9, 1:end), 'k', 'LineWidth', 2)
+    grid on
+    xlabel('Time in hours')
+    ylabel('Sun Sensor Intensity')
 end
