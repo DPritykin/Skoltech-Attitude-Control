@@ -90,7 +90,7 @@ classdef Simulation < handle
             t = 0;
             mCtrl = [0; 0; 0];
             stateEst = [1; 0; 0; 0; 0; 0; 0;];
-            simResults = zeros(8, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            simResults = zeros(9, ceil(this.simulationTime / this.sat.controlParams.tLoop));
 
             for iterIdx = 1:size(simResults, 2)
 
@@ -112,8 +112,8 @@ classdef Simulation < handle
                 q0 = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
                 omega0 = stateVec(end, 5:7)';
 
-                mtmMeasuredField = this.calcSensorMagnField(t, q0);
-                ssMeasuredVector = this.calcSSVector(t,q0);
+                [mtmMeasuredField,intM] = this.calcSensorMagnField(t, q0);
+                [ssMeasuredVector,intSS] = this.calcSSVector(t,q0);
 
                 %% state estimation (Extended Kalman filter)
                 t0 = t - this.sat.controlParams.tLoop;
@@ -138,7 +138,7 @@ classdef Simulation < handle
                 omegaRel = omegaEst - quatRotate(qEst, [0; this.orb.meanMotion; 0]);
                 mCtrl = this.sat.calcControlMagneticMoment(qEst, omegaRel, mtmMeasuredField);
 
-                simResults(:, iterIdx) = [t; q0; omega0];
+                simResults(:, iterIdx) = [t; q0; omega0; intSS];
             end
         end
 
@@ -171,11 +171,11 @@ classdef Simulation < handle
 
                 %% measurements
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
-                bSensor = this.sat.mtm.getSensorReadings(quatRotate(q0, bmodelT));
+                [bSensor,intM] = this.sat.mtm.getSensorReadings(quatRotate(q0, bmodelT));
 
                 SS_VecT_icrs = this.env.SunVecCalc(t);
                 SS_VecT = TransformedT * SS_VecT_icrs;
-                SS_Vec_Sensor = this.sat.ss.getSensorReadings(quatRotate(q0, SS_VecT));
+                [SS_Vec_Sensor,intSS] = this.sat.ss.getSensorReadings(quatRotate(q0, SS_VecT));
 
                 %% control moment for the next control loop (based on the measurements)                
                 mCtrl = this.sat.calcBdotMagneticMoment(bSensor, omegaSensor);
@@ -252,17 +252,17 @@ classdef Simulation < handle
             envMagnField = this.env.getMagneticField(onBoardModelField);
         end
 
-        function sensedMagnField = calcSensorMagnField(this, t, q)
+        function [sensedMagnField,intM] = calcSensorMagnField(this, t, q)
             envMagnField = this.calcEnvMagnField(t, q);
-            sensedMagnField = this.sat.mtm.getSensorReadings(envMagnField);
+            [sensedMagnField,intM] = this.sat.mtm.getSensorReadings(envMagnField);
         end
 
-        function sensedSunVec = calcSSVector(this, t, q)
+        function [sensedSunVec,intSS] = calcSSVector(this, t, q)
 
             TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
             SunVec_icrs = this.env.SunVecCalc(t);
             SunVec = TransformedT * SunVec_icrs;
-            sensedSunVec = this.sat.ss.getSensorReadings(quatRotate(q, SunVec));
+            [sensedSunVec,intSS] = this.sat.ss.getSensorReadings(quatRotate(q, SunVec));
         end
     end
 end

@@ -143,7 +143,7 @@ classdef KalmanFilter < handle
         end
 
         function K = calcKalmanGain(this, P, H, bModelNorm, SunModelNorm)
-            S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)/SunModelNorm^2];
+            S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)];
 
             K =  P * H' / S;
         end
