@@ -1,7 +1,7 @@
 classdef SunSensor < AbstractSensor
 
     methods
-        function val = getSensorReadings(this, trueValue)
+        function [val,intensity] = getSensorReadings(this, trueValue)
             % trueValue - sun vector in the body frame 
             generatedNoise = normrnd(this.bias, this.noiseSigma, [3, 1]);
 
@@ -11,7 +11,6 @@ classdef SunSensor < AbstractSensor
             rotation_axis = cross(trueValue, random_orthogonal);
             rotation_axis = rotation_axis / norm(rotation_axis);
 
-  
             cos_angles = cos(generatedNoise);
             sin_angles = sin(generatedNoise);
 
@@ -45,6 +44,17 @@ classdef SunSensor < AbstractSensor
             % Compute the overall rotation matrix R_noise by combining the rotations about x, y, and z axes
             R_noise = Rx * Ry * Rz; 
             val = R_noise * trueValue;
+
+            %INCIDENT ANGLE CALCULATION
+            sunSensorNormal = this.position/1e-2;
+            cos_incident_angle = dot(val, sunSensorNormal);
+            incident_angle_deg = acosd(cos_incident_angle);
+
+            if incident_angle_deg < this.fov
+                intensity = 1;
+            else
+                intensity = 0;
+            end 
         end
     end
 end
