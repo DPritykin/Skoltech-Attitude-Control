@@ -31,20 +31,21 @@ classdef KalmanFilter < handle
             this.initMeasurementsCovariance();
         end
 
-        function estimatedX = estimate(this, t0, x0, mCtrl, bModel0, bmodelT, bSensor,bInduced,omegaSensor)
+        function estimatedX = estimate(this, t0, x0, mCtrl, bModel0, bmodelT, bSensor,omegaSensor)
 
-            [predictedX, predictedP] = this.prediction(t0, x0, bModel0, bInduced, mCtrl);
+            [predictedX, predictedP] = this.prediction(t0, x0, bModel0, mCtrl);
 
             estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor,omegaSensor);
         end
 
         function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, mCtrl)
             bModel = quatRotate(x0(1:4), bModel0);
-            
+            bInduced = this.sat.calcResidualMagnFieldAtPosition(this.sat.residualDipolePos);
+
             PredictedResDipole = this.sat.calcResidualDipoleMoment();
-            PredictedBias_mtm = this.sat.mtm.getMagnetometerBias(bInduced); %Bias due to induced dipole
-            PredictedBias_gyro = this.sat.gyro.getGyroBias(); 
-             
+            PredictedBias_mtm = this.sat.mtm.getBias(bInduced);
+            PredictedBias_gyro = this.sat.gyro.getBias();
+            
             % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel, mCtrl), ...
