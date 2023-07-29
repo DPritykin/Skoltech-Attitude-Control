@@ -73,7 +73,7 @@ classdef Simulation < handle
 
             switch lower(simulationType)
                 case 'fullmagneticcontrol'
-                    simResults = this.simulateThreeAxialControl(q0, omega0);
+                    [simResults,ekfResults] = this.simulateThreeAxialControl(q0, omega0);
                 case 'bdotcontrol'
                     simResults = this.simulateBdotControl(q0, omega0);
                 otherwise
@@ -133,9 +133,8 @@ classdef Simulation < handle
                 elseif isempty(this.sat.gyro)
                     omegaSensor = 0;
                 end
-
-                inducedMagnField = this.calcInducedMagnField();
-                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,inducedMagnField,omegaSensor);
+                
+                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,omegaSensor);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
                 m_resEst = stateEst(8:10);
@@ -213,13 +212,8 @@ classdef Simulation < handle
 
         function sensedMagnField = calcSensorMagnField(this, t, q)
             envMagnField = this.calcEnvMagnField(t, q);
-            sensedMagnField = this.sat.mtm.getSensorReadings(envMagnField);
-        end
-
-         function inducedMagnField = calcInducedMagnField(this)
-            m_res = this.sat.calcResidualDipoleMoment();
-            r_mtm = this.sat.mtm.position;
-            inducedMagnField = (this.env.mu0/4*pi) * ((3*(dot(m_res,r_mtm)*r_mtm - m_res))/((norm(r_mtm))^3)); % Biot-Savart Law
+            InducedField = this.sat.calcResidualMagnFieldAtPosition(this.sat.residualDipolePos); 
+            sensedMagnField = this.sat.mtm.getSensorReadings(envMagnField,InducedField);
         end
     end
 end
