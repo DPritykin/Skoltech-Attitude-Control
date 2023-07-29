@@ -1,6 +1,7 @@
 classdef Satellite < handle
 
     properties(SetAccess = protected, GetAccess = public)
+        env           % environment referenced
         J             % inertia tensor
         invJ          % inversed inertia tensor
 
@@ -10,6 +11,9 @@ classdef Satellite < handle
         gyro          % gyroscope
 
         mtq           % magnetorquer array
+
+        residualDipole   % residual magnetization - a dipole that can be set externally
+        residualDipolePos  % position of residual dipole wrt sat axes
     end
 
     methods
@@ -18,6 +22,16 @@ classdef Satellite < handle
             this.invJ = inv(inertiaTensor);
         end
 
+        function setResidualDipole(this, mRes, pos)
+            arguments
+                this
+                mRes(3,1) {mustBeNumeric} = [0; 0; 0]
+                pos(3,1) {mustBeNumeric} = [0; 0; 0]
+            end
+            this.residualDipole = mRes;
+            this.residualDipolePos = pos;
+        end
+        
         function setControlParams(this, parameters)
             arguments
                 this
@@ -45,6 +59,14 @@ classdef Satellite < handle
             this.controlParams.qReqCnj = quatConjugate(parameters.qReq);
         end
 
+        function setEnvironment(this, env)
+            if isa(env, 'Environment')
+                this.env = env;
+            else
+                error('Satellite:InvalidEnvironment', 'Invalid Environment object!')
+            end
+        end
+        
         function setMagnetometer(this, mtm)
             if isa(mtm, 'Magnetometer')
                 this.mtm = mtm;
@@ -97,13 +119,16 @@ classdef Satellite < handle
             m = m / maxRatio;
         end
 
-            function m = calcResidualDipoleMoment(this)
-            m = [1;1;1]*(10^-3); % constant dipole at satellite centre
-%               m = rand(3,1);
-%               if any(abs(m) > 0.001)
-%                   maxRatio = max(abs(m) ./ 0.001);
-%                   m = m / maxRatio;
-%               end
+       function m = calcResidualDipoleMoment(this)
+            m = this.residualDipole; % Consider changing for a more complicated and true-to-life model
+        end
+
+        function b = calcResidualMagnFieldAtPosition(this,pos)
+            mRes= this.calcResidualDipoleMoment();
+            pos3 = vecnorm(pos)^3;
+            ePos = pos / vecnorm(pos);
+
+            b = (this.env.mu0 / 4*pi) * (3 * (dot(mRes,ePos) * ePos - mRes)) / pos3; % dipole magnetic field formula
         end
     end
 end
