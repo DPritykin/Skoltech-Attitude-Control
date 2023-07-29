@@ -14,13 +14,17 @@ classdef AbstractSensor < handle
         sensorOutput = getSensorReadings(this, trueValue)
     end
 
+   methods (Abstract)
+        sensorBias = getBias(this, inducedValues)
+    end
+    
     methods
         function this = AbstractSensor(parameters)
             arguments
                 parameters.bias {mustBeNumeric} = [0; 0; 0];
                 parameters.sigma {mustBeNumeric} = 1e-12;
-                parameters.position {mustBeNumeric} = [0; 0; 0];
-                parameters.dcm {mustBeNumeric} = eye(3);
+                parameters.position(3,1) {mustBeNumeric} = [0; 0; 0];
+                parameters.dcm(3,3) {mustBeNumeric} = eye(3);
             end
 
             this.bias = parameters.bias;
@@ -37,7 +41,7 @@ classdef AbstractSensor < handle
         function setBias(this, bias)
             arguments
                 this
-                bias {mustBeNumeric} = [0; 0; 0];
+                bias(3,1) {mustBeNumeric} = [0; 0; 0];
             end
 
             this.bias = bias;
