@@ -1,19 +1,18 @@
 classdef Gyroscope < AbstractSensor
 
-    methods
-        function val = getGyroBias(this)
-            val = randn(3,1); % randomly initialized constant bias
-            if any(abs(val)) > 1e-5
-                 maxRatio = max(abs(val) ./ 1e-5);
-                 val = val / maxRatio;
-            end
-        end
-        
-        function val = getSensorReadings(this, trueValue)
+     methods
+         function val = getSensorReadings(this, trueValue)
+            gyroBias = this.getBias();
+
             % trueValue - angular velocity in the satellite body frame
-            generatedNoise = normrnd(this.bias, this.noiseSigma, [3, 1]);
+            generatedNoise = normrnd(gyroBias, this.noiseSigma, [3, 1]);
 
             val = trueValue + this.dcm * generatedNoise;
+         end
+
+         function gyroBias = getBias(this)
+            gyroBias = this.bias;  %TODO: Add random walk or other modifications
         end
-    end
+    end  
+          
 end
