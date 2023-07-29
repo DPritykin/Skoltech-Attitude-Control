@@ -22,6 +22,12 @@ orb = CircularOrbit(env, ... % Environment object
 
 sat = Satellite([54.66 -0.04 -0.06; -0.04 55.31 0.29; -0.06 0.29 12.01]/1000); % [ kg * m^2] inertia tensor for Sk-B1
 
+% defining residual dipole parameters
+sat.setResidualDipole([0.001; 0.001; 0.001],... % [Am^2] residual dipole moment
+                      [0; 0; 0]);  % [m] residual dipole position
+
+sat.setEnvironment(env); 
+
 % defining control parameters
 sat.setControlParams(tMeas = 0.5, ...           % [s] sampling time step
                      tCtrl = 3, ...             % [s] control time step
