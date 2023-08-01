@@ -42,13 +42,13 @@ classdef KalmanFilter < handle
             bModel = quatRotate(x0(1:4), bModel0);
             bInduced = this.sat.calcResidualMagnFieldAtPosition(this.sat.residualDipolePos);
 
-            PredictedResDipole = this.sat.calcResidualDipoleMoment();
-            PredictedBias_mtm = this.sat.mtm.getBias(bInduced);
-            PredictedBias_gyro = this.sat.gyro.getBias();
+            m_resEst = x0(8:10);
+            PredictedBias_mtm = x0(11:13);
+            PredictedBias_gyro = x0(14:16);
             
             % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
-            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel, mCtrl), ...
+            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel, mCtrl, m_resEst), ...
                                     timeInterval, x0(1:7), this.odeOptions);
 
             % magnetorquers off
@@ -57,7 +57,7 @@ classdef KalmanFilter < handle
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel), ...
                                     timeInterval, x0(1:7), this.odeOptions);
 
-            predictedX = [stateVec(end, 1:7)' ; PredictedResDipole ;PredictedBias_mtm; PredictedBias_gyro];
+            predictedX = [stateVec(end, 1:7)' ; m_resEst ;PredictedBias_mtm; PredictedBias_gyro];
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
 
             Phi = this.calcEvolutionMatrix(x0, bModel, mCtrl);
@@ -67,14 +67,17 @@ classdef KalmanFilter < handle
         function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor,omegaSensor)
             bModelBody = quatRotate(predictedX(1:4), bModelT);
             bModelNorm = vecnorm(bModelBody);
+
+            mtm_bias = predictedX(11:13);
+            gyro_bias = predictedX(14:16);
            
             if ~isempty(this.sat.gyro) 
                 z = [bSensor / bModelNorm ; omegaSensor]; 
-                Hx = [(bModelBody + predictedX(8:10)) / bModelNorm  ; predictedX(5:7) + predictedX(11:13)];   % magnetometer + gyro          
+                Hx = [(bModelBody + mtm_bias) / bModelNorm  ; predictedX(5:7) + gyro_bias];   % magnetometer + gyro          
             
             elseif isempty(this.sat.gyro) 
                  z = bSensor / bModelNorm;
-                 Hx = (bModelBody + predictedX(8:10)) / bModelNorm ;  % magnetometer only 
+                 Hx = (bModelBody + mtm_bias) / bModelNorm ;  % magnetometer only 
                  
             end   
 
@@ -130,7 +133,7 @@ classdef KalmanFilter < handle
 
             Fgyr = skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J;
 
-            Fmagn = 2 * skewSymm(mCtrl) * skewSymm(bModel);
+            Fmagn = 2 * skewSymm(mCtrl + mRes) * skewSymm(bModel);
 
             F1 = [-skewSymm(omegaRel), 0.5 * eye(3), zeros(3), zeros(3), zeros(3)];
             F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr, zeros(3), zeros(3), zeros(3)];
