@@ -60,7 +60,7 @@ classdef KalmanFilter < handle
             predictedX = [stateVec(end, 1:7)' ; m_resEst ;PredictedBias_mtm; PredictedBias_gyro];
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
 
-            Phi = this.calcEvolutionMatrix(x0, bModel, mCtrl);
+            Phi = this.calcEvolutionMatrix(x0, bModel, mCtrl, m_restEst);
             predictedP = Phi * this.P * Phi' + this.Q;
         end
 
@@ -121,7 +121,7 @@ classdef KalmanFilter < handle
             end
         end
 
-        function Phi = calcEvolutionMatrix(this, state, bModel, mCtrl)
+        function Phi = calcEvolutionMatrix(this, state, bModel, mCtrl, mRes)
             q = state(1:4);
             omega = state(5:7);
             omegaRel = omega - quatRotate(q, [0; this.orb.meanMotion; 0]);
