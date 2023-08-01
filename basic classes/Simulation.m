@@ -197,8 +197,9 @@ classdef Simulation < handle
         function stateVec = integrate(this, timeInterval, initialConditions, mCtrl)
             envB = this.calcEnvMagnField(timeInterval(1), initialConditions(1:4));
             distTorque = this.env.getDisturbanceTorque();
-
-            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, envB, mCtrl, distTorque), ...
+            mRes = this.sat.residualDipole;
+            
+            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, envB, mCtrl, mRes, distTorque), ...
                                     timeInterval, initialConditions, this.odeOptions);
         end
 
@@ -212,7 +213,7 @@ classdef Simulation < handle
 
         function sensedMagnField = calcSensorMagnField(this, t, q)
             envMagnField = this.calcEnvMagnField(t, q);
-            InducedField = this.sat.calcResidualMagnFieldAtPosition(this.sat.residualDipolePos); 
+            InducedField = this.sat.calcResidualMagnFieldAtPosition(this.sat.mtm.position); 
             sensedMagnField = this.sat.mtm.getSensorReadings(envMagnField,InducedField);
         end
     end
