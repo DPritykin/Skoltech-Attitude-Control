@@ -1,4 +1,4 @@
-function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, trqDist)
+function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, mRes, trqDist)
 
     q = x(1:4) / norm(x(1:4));
     omega = x(5:7);
@@ -10,8 +10,14 @@ function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, trqDist)
     %% Magnetic torque
     if ~exist('mCtrl', 'var')
         mCtrl = [0; 0; 0];
-    end    
-    trqMagn = crossProduct(mCtrl, envB);
+    end   
+
+     if ~exist('mRes', 'var')
+        mRes = [0; 0; 0];
+    end   
+
+    m = mCtrl + mRes;
+    trqMagn = crossProduct(m, envB);
 
     %% Disturbance torque
     if ~exist('trqDist', 'var')
