@@ -96,7 +96,7 @@ classdef Simulation < handle
             mtmBias = zeros(3, 1);            % Initializing mtm bias 
             gyroBias = zeros(3, 1);           % Initializing gyro bias
             
-            ekfStateEst = [stateEst; mRes; mtmBias; gyroBias]; % Initialization [q;w;m_res;b_mtm;b_gyro]
+            ekfStateEst = [stateEst; mRes; mtmBias; gyroBias]; % Initialization
             
             simResults = zeros(8, ceil(this.simulationTime / this.sat.controlParams.tLoop));
             ekfResults = zeros(17, ceil(this.simulationTime / this.sat.controlParams.tLoop));
@@ -122,7 +122,7 @@ classdef Simulation < handle
                 omega0 = stateVec(end, 5:7)';
 
                 % magnetometer
-                mtmMeasuredField = this.calcSensorMagnField(t, q0);
+                mtmReadings = this.calcSensorMagnField(t, q0);
 
                 % gyroscope (TODO: take several points, use sliding mean)
                 if ~isempty(this.sat.gyro)
@@ -136,7 +136,7 @@ classdef Simulation < handle
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
                 
-                ekfStateEst = this.ekf.estimate(t0, ekfStateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField, gyroReadings);
+                ekfStateEst = this.ekf.estimate(t0, ekfStateEst, mCtrl, bModel0, bmodelT, mtmReadings, gyroReadings);
                 qEst = ekfStateEst(1:4);
                 omegaEst = ekfStateEst(5:7);
                 mResEst = ekfStateEst(8:10);
@@ -147,7 +147,7 @@ classdef Simulation < handle
 
                 %% control moment for the next control loop (based on the Kalman estimate of the state)
                 omegaRel = omegaEst - quatRotate(qEst, [0; this.orb.meanMotion; 0]);
-                mCtrl = this.sat.calcControlMagneticMoment(qEst, omegaRel, mtmMeasuredField, mResEst);
+                mCtrl = this.sat.calcControlMagneticMoment(qEst, omegaRel, mtmReadings, mResEst);
 
                 simResults(:, iterIdx) = [t; q0; omega0];
             end

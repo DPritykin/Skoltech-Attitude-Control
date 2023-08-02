@@ -51,10 +51,10 @@ classdef KalmanFilter < handle
                                     timeInterval, x0(1:7), this.odeOptions);
 
             % magnetorquers off
-            x0 = stateVec(end, 1:7)';
+            x1 = stateVec(end, 1:7)';
             timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel, [0; 0; 0], mResEst), ...
-                                    timeInterval, x0(1:7), this.odeOptions);
+                                    timeInterval, x1(1:7), this.odeOptions);
 
             predictedX = [stateVec(end, 1:7)'; mResEst; predictedMtmBias; predictedGyroBias];
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
@@ -149,10 +149,13 @@ classdef KalmanFilter < handle
         end
 
         function K = calcKalmanGain(this, P, H, bModelNorm)
+            measCovariance = this.R;
+            measCovariance(1:3, 1:3) = this.R(1:3, 1:3) / bModelNorm^2;
+
             if ~isempty(this.sat.gyro)
-                S = H * P * H' + this.R / [(bModelNorm^2) * eye(3), zeros(3); zeros(3), eye(3)];
+                S = H * P * H' + measCovariance;
             elseif isempty(this.sat.gyro)
-                S = H * P * H' + this.R / bModelNorm^2;
+                S = H * P * H' + measCovariance;
             end
 
             K =  P * H' / S;
