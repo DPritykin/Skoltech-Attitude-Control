@@ -45,10 +45,10 @@ classdef KalmanFilter < handle
                                     timeInterval, x0, this.odeOptions);
 
             % magnetorquers off
-            x0 = stateVec(end, 1:7)';
+            x1 = stateVec(end, 1:7)';
             timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
-                                    timeInterval, x0, this.odeOptions);
+                                    timeInterval, x1, this.odeOptions);
 
             predictedX = stateVec(end, 1:7)';
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
@@ -98,7 +98,6 @@ classdef KalmanFilter < handle
         function Phi = calcEvolutionMatrix(this, state, bModel, mCtrl)
             q = state(1:4);
             omega = state(5:7);
-            omegaRel = omega - quatRotate(q, [0; this.orb.meanMotion; 0]);
 
             e3 = quatRotate(q, [0, 0, 1]);
 
@@ -109,7 +108,7 @@ classdef KalmanFilter < handle
 
             Fmagn = 2 * skewSymm(mCtrl) * skewSymm(bModel);
 
-            F1 = [-skewSymm(omegaRel), 0.5 * eye(3)];
+            F1 = [-skewSymm(omega), 0.5 * eye(3)];
             F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr];
 
             F = [F1; F2];
