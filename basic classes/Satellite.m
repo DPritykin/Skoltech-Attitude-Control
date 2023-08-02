@@ -91,7 +91,7 @@ classdef Satellite < handle
             end
         end
 
-        function m = calcControlMagneticMoment(this, q, omegaRel, B, mRes)
+        function m = calcControlMagneticMoment(this, q, omegaRel, B, mResidual)
 
             ctrl = this.controlParams;
             dq = quatProduct(ctrl.qReqCnj, q);
@@ -104,7 +104,7 @@ classdef Satellite < handle
 
             S = 4 * multiplier * dq(2:4);
 
-            m = ((-ctrl.kW * crossProduct(B, omegaRel) - ctrl.kQ * crossProduct(B, S)) - mRes) * ctrl.tLoop / ctrl.tCtrl;
+            m = ((-ctrl.kW * crossProduct(B, omegaRel) - ctrl.kQ * crossProduct(B, S)) - mResidual) * ctrl.tLoop / ctrl.tCtrl;
 
             if any(abs(m) > this.mtq.maxMagneticMoment)
                 maxRatio = max(abs(m) ./ this.mtq.maxMagneticMoment);
@@ -123,12 +123,12 @@ classdef Satellite < handle
             m = this.residualDipole; % Consider changing for a more complicated and true-to-life model
         end
 
-        function b = calcResidualMagnFieldAtPosition(this,pos)
+        function b = calcResidualMagnFieldAtPosition(this, pos)
             mRes= this.calcResidualDipoleMoment();
             pos3 = vecnorm(pos)^3;
             ePos = pos / vecnorm(pos);
 
-            b = (this.env.mu0 / 4*pi) * (3 * (dot(mRes,ePos) * ePos - mRes)) / pos3; % dipole magnetic field formula
+            b = (this.env.mu0 / 4 * pi) * (3 * (dot(mRes, ePos) * ePos - mRes)) / pos3; % dipole magnetic field formula
         end
     end
 end

@@ -29,8 +29,7 @@ function res = rhsRotationalDynamics(t, x, sat, orb, envB, mCtrl, mRes, trqDist)
 
     dq = 0.5 * quatProduct(q, [0; Omega]);
 
-    dOmega = sat.invJ * (- crossProduct(omega, (sat.J) * omega) + ...
-                           trqMagn + trqGrav + trqDist);
+    dOmega = sat.invJ * (- crossProduct(omega, (sat.J) * omega) + trqMagn + trqGrav + trqDist);
 
     res = [dq; dOmega];
 end

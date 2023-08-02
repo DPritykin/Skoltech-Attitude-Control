@@ -1,12 +1,12 @@
 classdef Magnetometer < AbstractSensor
 
     methods
-        function val = getSensorReadings(this, trueValue, InducedField)
+        function val = getSensorReadings(this, trueValue, inducedField)
             if nargin < 3
-                InducedField = [0; 0; 0];
+                inducedField = [0; 0; 0]; % TODO be careful what ref-frame the inducedField is in
             end
 
-            updatedBias = this.getBias(InducedField);
+            updatedBias = this.getBias(inducedField);
 
             % trueValue - magnetic field in the satellite body frame
             generatedNoise = normrnd(updatedBias, this.noiseSigma, [3, 1]);
@@ -15,12 +15,12 @@ classdef Magnetometer < AbstractSensor
         end
 
 
-        function mtmBias = getBias(this, InducedField)
+        function mtmBias = getBias(this, inducedField)
             if nargin < 3
-                InducedField = [0; 0; 0];
+                inducedField = [0; 0; 0];
             end
 
-            mtmBias = this.bias + InducedField;
+            mtmBias = this.bias + inducedField;
         end
     end
 end
