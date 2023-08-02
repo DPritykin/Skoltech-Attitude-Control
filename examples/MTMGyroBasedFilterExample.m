@@ -20,11 +20,11 @@ orb = CircularOrbit(env, ... % Environment object
 
 %% satellite settings
 
-sat = Satellite([54.66 -0.04 -0.06; -0.04 55.31 0.29; -0.06 0.29 12.01]/1000); % [ kg * m^2] inertia tensor for Sk-B1
+sat = Satellite([54.66 -0.04 -0.06; -0.04 55.31 0.29; -0.06 0.29 12.01] * 1e-3); % [ kg * m^2] inertia tensor for Sk-B1
 
 % defining residual dipole parameters
-sat.setResidualDipole([0.001; 0.001; 0.001],... % [Am^2] residual dipole moment
-                      [0; 0; 0]);  % [m] residual dipole position
+sat.setResidualDipole([1; 1; 1] * 1e-4 / sqrt(3),...      % [Am^2] residual dipole moment
+                      [0; 0; 0]);                         % [m] residual dipole position
 
 sat.setEnvironment(env); 
 
@@ -36,15 +36,15 @@ sat.setControlParams(tMeas = 0.5, ...           % [s] sampling time step
                      kW = 60 / orb.meanMotion)  % [N * m * s / T^2] stabilizing parameter for PID-regulator
 
 % adding a magnetometer
-mtm = Magnetometer(bias = [0; 0; 0;], ...         % [T] magnetometer bias
-                   sigma = 1e-7, ...              % [T] magnetometer measurement deviation
-                   position = [2; 2; -3] * 1e-2); % [m] magnetometer position in the body-frame
+mtm = Magnetometer(bias = [1; 1; 1] * 1e-8 / sqrt(3), ...   % [T] magnetometer bias
+                   sigma = 1e-7, ...                        % [T] magnetometer measurement deviation
+                   position = [2; 2; -3] * 1e-2);           % [m] magnetometer position in the body-frame
 
 sat.setMagnetometer(mtm);
 
 % adding a gyroscope
-gyro = Gyroscope(bias = [0; 0; 0;], ...         % [s^-1] gyroscope bias
-                 sigma = 1.45e-6);                   % [rad/s] gyroscope measurement deviation (0.3 deg/hr: STIM 377H Gyro)
+gyro = Gyroscope(bias = [1; 1; 1] * 1e-6 / sqrt(3), ...   % [s^-1] gyroscope bias
+                 sigma = 1.45e-6);                        % [rad/s] gyroscope measurement deviation (0.3 deg/hr: STIM 377H Gyro)
                   
 
 sat.setGyroscope(gyro);
@@ -63,14 +63,14 @@ sat.setMtqArray(standardMtqArray);
 
 %% EKF settings
 
-ekf = KalmanFilter(sat = sat, ...      % Satellite object
-                   orb = orb, ...      % CircularOrbit object 
-                   env = env, ...      % Environment object
-                   sigmaQ0 = 1, ...    % variance to initialize the error covariance matrix (quaternion part)
-                   sigmaOmega0 = 0.1, ... % variance to initialize the error covariance matrix (omega part)
-                   sigmaResDipole0 = 0.1,... % variance to initialize the error covariance matrix (residual dipole) [Ref: Annenkova et. al]
-                   sigmaBias0_mtm = 10e-5,... % variance to initialize the error covariance matrix (bias part-mtm) [Ref: Annenkova et. al]
-                   sigmaBias0_gyro = 10e-4); % variance to initialize the error covariance matrix (bias part-gyro) *assumed
+ekf = KalmanFilter(sat = sat, ...              % Satellite object
+                   orb = orb, ...              % CircularOrbit object 
+                   env = env, ...              % Environment object
+                   sigmaQ0 = 2, ...            % variance to initialize the error covariance matrix (quaternion part)
+                   sigmaOmega0 = 0.05, ...     % variance to initialize the error covariance matrix (omega part)
+                   sigmaResDipole0 = 1e-2, ... % variance to initialize the error covariance matrix (residual dipole) [Ref: Annenkova et. al]
+                   sigmaMtmBias0 = 1e-6, ...   % variance to initialize the error covariance matrix (bias part-mtm) [Ref: Annenkova et. al]
+                   sigmaGyroBias0 = 1e-4);     % variance to initialize the error covariance matrix (bias part-gyro) *assumed
 %% simulation settings
 
 simulationTime = 8 * 3600;
@@ -82,21 +82,19 @@ sim.setSatellite(sat);
 sim.setFilter(ekf);
 
 %% simulation loop
-number_of_runs = 10;
+number_of_runs = 1;
 RMSE = zeros(6, number_of_runs);
 RMSE_EKF = zeros(6, number_of_runs);
 
-% for i =1:number_of_runs
-
-    [simResults,ekfResults] = sim.run('fullMagneticControl');
+for i =1:number_of_runs
+    [simResults, ekfResults] = sim.run('fullMagneticControl');
 
     plotResults(simResults, sim.orb.meanMotion);    
-    comparison_plots(simResults,ekfResults,sim.orb.meanMotion); % EKF Results & True and Estimated Results comparison
+    comparison_plots(simResults, ekfResults, sim.orb.meanMotion); % EKF Results & True and Estimated Results comparison
 
 %     RMSE(:, i) = plotResults(simResults(i), sim.orb.meanMotion);
 %     RMSE_EKF(:,i) = comparison_plots(simResults(i), ekfResults(i), sim.orb.meanMotion);
-% 
-% end 
+end 
 
 %% plotter
 function rmse = plotResults(simData, meanMotion)
