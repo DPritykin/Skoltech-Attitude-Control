@@ -52,6 +52,7 @@ classdef KalmanFilter < handle
 
             % magnetorquers off
             x1 = stateVec(end, 1:7)';
+            x1(1:4) = x1(1:4) / vecnorm(x1(1:4));
             timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, bModel, [0; 0; 0], mResEst), ...
                                     timeInterval, x1(1:7), this.odeOptions);
@@ -84,7 +85,7 @@ classdef KalmanFilter < handle
             correctedX = K * (z - Hx);
             qCor = vec2unitQuat(correctedX(1:3));
 
-            estimatedX = zeros(15, 1);
+            estimatedX = zeros(16, 1);
             estimatedX(1:4) = quatProduct(predictedX(1:4), qCor);      % quaternion
             estimatedX(5:16) = predictedX(5:16) + correctedX(4:15);
 
@@ -106,7 +107,7 @@ classdef KalmanFilter < handle
             G = [zeros(3); this.sat.invJ; zeros(9, 3)];
             D = eye(3) * distTorqueSigma^2;
 
-            this.Q = G * D * G' * this.sat.controlParams.tCtrl;
+            this.Q = G * D * G' * this.sat.controlParams.tLoop;
         end
 
         function initMeasurementsCovariance(this)
@@ -140,11 +141,10 @@ classdef KalmanFilter < handle
 
         function H = calcObservationMatrix(this, bModel)
             if ~isempty(this.sat.gyro)
-                H = [2 * skewSymm(bModel) zeros(3, 6) eye(3) zeros(3);
-                    zeros(3) eye(3) zeros(3, 6) eye(3)];               % magnetometer + gyroscope
-
+                H = [2 * skewSymm(bModel), zeros(3, 6), eye(3), zeros(3);
+                    zeros(3), eye(3), zeros(3, 6), eye(3)];                % magnetometer + gyroscope
             elseif isempty(this.sat.gyro)
-                H = [2 * skewSymm(bModel), zeros(3, 6), eye(3)];       % only magnetometer
+                H = [2 * skewSymm(bModel), zeros(3, 6), eye(3)];           % only magnetometer
             end
         end
 

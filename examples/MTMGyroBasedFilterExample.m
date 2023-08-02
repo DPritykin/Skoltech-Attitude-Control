@@ -23,7 +23,7 @@ orb = CircularOrbit(env, ... % Environment object
 sat = Satellite([54.66 -0.04 -0.06; -0.04 55.31 0.29; -0.06 0.29 12.01] * 1e-3); % [ kg * m^2] inertia tensor for Sk-B1
 
 % defining residual dipole parameters
-sat.setResidualDipole([1; 1; 1] * 1e-5 / sqrt(3),...      % [Am^2] residual dipole moment
+sat.setResidualDipole([1; 1; 1] * 1e-4 / sqrt(3),...      % [Am^2] residual dipole moment
                       [0; 0; 0]);                         % [m] residual dipole position
 
 sat.setEnvironment(env); 
@@ -68,9 +68,9 @@ ekf = KalmanFilter(sat = sat, ...              % Satellite object
                    env = env, ...              % Environment object
                    sigmaQ0 = 2, ...            % variance to initialize the error covariance matrix (quaternion part)
                    sigmaOmega0 = 0.05, ...     % variance to initialize the error covariance matrix (omega part)
-                   sigmaResDipole0 = 0.1, ...  % variance to initialize the error covariance matrix (residual dipole) [Ref: Annenkova et. al]
-                   sigmaMtmBias0 = 1e-5, ...   % variance to initialize the error covariance matrix (bias part-mtm) [Ref: Annenkova et. al]
-                   sigmaGyroBias0 = 1e-3);     % variance to initialize the error covariance matrix (bias part-gyro) *assumed
+                   sigmaResDipole0 = 1e-2, ... % variance to initialize the error covariance matrix (residual dipole) [Ref: Annenkova et. al]
+                   sigmaMtmBias0 = 1e-6, ...   % variance to initialize the error covariance matrix (bias part-mtm) [Ref: Annenkova et. al]
+                   sigmaGyroBias0 = 1e-4);     % variance to initialize the error covariance matrix (bias part-gyro) *assumed
 %% simulation settings
 
 simulationTime = 8 * 3600;

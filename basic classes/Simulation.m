@@ -90,6 +90,7 @@ classdef Simulation < handle
             
             stateEst = [1; 0; 0; 0; 0; 0; 0;]; % Initialization [q; w]
             if ~isempty(this.sat.gyro)
+                stateEst(1:4) = q0;
                 stateEst(5:7) =  this.sat.gyro.getSensorReadings(omega0);
             end
             mRes = zeros(3, 1);               % Initializing residual dipole
