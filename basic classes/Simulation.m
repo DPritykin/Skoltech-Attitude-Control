@@ -91,7 +91,7 @@ classdef Simulation < handle
             mCtrl = [0; 0; 0];
             stateEst = [1; 0; 0; 0; 0; 0; 0;];
             simResults = zeros(9, ceil(this.simulationTime / this.sat.controlParams.tLoop));
-
+            startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
             for iterIdx = 1:size(simResults, 2)
 
                 %% controlled dynamics (magnetorquers on)
@@ -112,17 +112,18 @@ classdef Simulation < handle
                 q0 = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
                 omega0 = stateVec(end, 5:7)';
 
-                [mtmMeasuredField,intM] = this.calcSensorMagnField(t, q0);
+                [mtmMeasuredField] = this.calcSensorMagnField(t, q0);
                 [ssMeasuredVector,intSS] = this.calcSSVector(t,q0);
 
                 %% state estimation (Extended Kalman filter)
+                SimNum = 1; 
                 t0 = t - this.sat.controlParams.tLoop;
 
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
 
-                SS_Vec0_icrs = this.env.SunVecCalc(t0);
-                SS_VecT_icrs = this.env.SunVecCalc(t);
+                SS_Vec0_icrs = this.env.SunVecCalc(t0,startTime);
+                SS_VecT_icrs = this.env.SunVecCalc(t,startTime);
 
                 Transformed0 = this.orb.eci2orb(this.orb.meanMotion * t0);
                 TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
@@ -130,7 +131,7 @@ classdef Simulation < handle
                 SS_Vec_Model0 = Transformed0 * SS_Vec0_icrs;
                 SS_Vec_ModelT = TransformedT * SS_VecT_icrs;
 
-                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,ssMeasuredVector,SS_Vec_Model0,SS_Vec_ModelT);
+                stateEst = this.ekf.estimate(SimNum,t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,ssMeasuredVector,SS_Vec_Model0,SS_Vec_ModelT);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
 
@@ -171,11 +172,6 @@ classdef Simulation < handle
 
                 %% measurements
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
-                [bSensor,intM] = this.sat.mtm.getSensorReadings(quatRotate(q0, bmodelT));
-
-                SS_VecT_icrs = this.env.SunVecCalc(t);
-                SS_VecT = TransformedT * SS_VecT_icrs;
-                [SS_Vec_Sensor,intSS] = this.sat.ss.getSensorReadings(quatRotate(q0, SS_VecT));
 
                 %% control moment for the next control loop (based on the measurements)                
                 mCtrl = this.sat.calcBdotMagneticMoment(bSensor, omegaSensor);
@@ -192,8 +188,9 @@ classdef Simulation < handle
 
             t = 0;
             rwCtrl = [0; 0; 0];
-            simResults = zeros(11, ceil(this.simulationTime / this.sat.controlParams.tLoop));
-
+            stateEst = [1; 0; 0; 0; 0; 0; 0];
+            simResults = zeros(12, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
             for iterIdx = 1:size(simResults, 2)
 
                 %% controlled dynamics
@@ -209,15 +206,50 @@ classdef Simulation < handle
                 omega0 = stateVec(end, 5:7)';
                 rwAngMomentum0 = stateVec(end, 8:10)';
 
-                %% control torque for the next control loop
-                ez_b = quatRotate(q0, [0; 0; 1]);
-                trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
-                externalTorqueToCompensate = trqGrav - - crossProduct(omega0, (this.sat.J) * omega0 + rwAngMomentum0);
-                rwCtrl = this.sat.calcRwControl(q0, omega0, rwAngMomentum0, externalTorqueToCompensate);
+                %% measurements (RW off)
+                simTime = t + this.sat.controlParams.tMeas;
 
-                simResults(:, iterIdx) = [t; q0; omega0; rwAngMomentum0];
+                stateVec = this.integrate([t simTime], ...
+                                          [q0; omega0; rwAngMomentum0]);
+
+                t = simTime;
+                q0 = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
+                omega0 = stateVec(end, 5:7)';
+                rwAngMomentum0 = stateVec(end, 8:10)';
+
+                [mtmMeasuredField] = this.calcSensorMagnField(t, q0);
+                [ssMeasuredVector,intSS] = this.calcSSVector(t, q0);
+
+                %% state estimation (Extended Kalman filter)
+                SimNum = 2; 
+                t0 = t - this.sat.controlParams.tLoop;
+
+                bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
+                bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
+
+                SS_Vec0_icrs = this.env.SunVecCalc(t0,startTime);
+                SS_VecT_icrs = this.env.SunVecCalc(t,startTime);
+
+                Transformed0 = this.orb.eci2orb(this.orb.meanMotion * t0);
+                TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
+
+                SS_Vec_Model0 = Transformed0 * SS_Vec0_icrs;
+                SS_Vec_ModelT = TransformedT * SS_VecT_icrs;
+
+                stateEst = this.ekf.estimate(SimNum, t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField,ssMeasuredVector,SS_Vec_Model0,SS_Vec_ModelT);
+                qEst = stateEst(1:4);
+                omegaEst = stateEst(5:7);
+
+                %% control torque for the next control loop (based on the Kalman estimate of the state)  
+                ez_b = quatRotate(qEst, [0; 0; 1]);
+                trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
+                externalTorqueToCompensate = trqGrav - - crossProduct(omegaEst, (this.sat.J) * omegaEst + rwAngMomentum0);
+                rwCtrl = this.sat.calcRwControl(qEst, omegaEst, rwAngMomentum0, externalTorqueToCompensate);
+
+                simResults(:, iterIdx) = [t; q0; omega0; rwAngMomentum0; intSS];
             end
         end
+
 
         function stateVec = integrate(this, timeInterval, initialConditions, ctrlAction, simulationType)
             arguments
@@ -252,17 +284,19 @@ classdef Simulation < handle
             envMagnField = this.env.getMagneticField(onBoardModelField);
         end
 
-        function [sensedMagnField,intM] = calcSensorMagnField(this, t, q)
+        function [sensedMagnField] = calcSensorMagnField(this, t, q)
             envMagnField = this.calcEnvMagnField(t, q);
-            [sensedMagnField,intM] = this.sat.mtm.getSensorReadings(envMagnField);
+            [sensedMagnField,~] = this.sat.mtm.getSensorReadings(envMagnField);
         end
 
         function [sensedSunVec,intSS] = calcSSVector(this, t, q)
 
+            startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
             TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
-            SunVec_icrs = this.env.SunVecCalc(t);
+            SunVec_icrs = this.env.SunVecCalc(t,startTime);
             SunVec = TransformedT * SunVec_icrs;
             [sensedSunVec,intSS] = this.sat.ss.getSensorReadings(quatRotate(q, SunVec));
+
         end
     end
 end

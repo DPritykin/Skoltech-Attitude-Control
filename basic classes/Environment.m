@@ -32,9 +32,9 @@ classdef Environment < handle
                       -2 * sin(argLat) * sin(inclination)];
         end
 
-        function S_Vec = SunVecCalc(this,time)
+        function S_Vec = SunVecCalc(this,time,startTime)
 
-            baseTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
+            baseTime = startTime;
             durations = seconds(time);
             timeValues = baseTime + durations;
 

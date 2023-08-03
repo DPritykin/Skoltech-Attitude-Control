@@ -28,23 +28,29 @@ classdef KalmanFilter < handle
             this.initMeasurementsCovariance();
         end
 
-        function estimatedX = estimate(this, t0, x0, mCtrl, bModel0, bmodelT, bSensor,SS_Vec_Sensor,SS_Vec_Model0,SS_Vec_ModelT)
+        function estimatedX = estimate(this, SimNum, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_Model0, SS_Vec_ModelT)
 
-            [predictedX, predictedP] = this.prediction(t0, x0, bModel0, mCtrl);
+            [predictedX, predictedP] = this.prediction(SimNum, t0, x0, bModel0, Ctrl);
+            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor);
 
-            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor,SS_Vec_ModelT,SS_Vec_Sensor);
         end
+        
 
-        function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, mCtrl)
+        function [predictedX, predictedP] = prediction(this, SimNum, t0, x0, bModel0, Ctrl)
             bModel = quatRotate(x0(1:4), bModel0);
 
-            % magnetorquers on
+            if SimNum == 1
+                ctrlTorque = crossProduct(Ctrl, bModel);
+            elseif SimNum == 2
+                ctrlTorque = Ctrl;
+            end 
+    
+            % Actuator on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
-            ctrlTorque = crossProduct(mCtrl, bModel);
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, ctrlTorque), ...
                                     timeInterval, x0, this.odeOptions);
 
-            % magnetorquers off
+            % Actuator off
             x0 = stateVec(end, 1:7)';
             timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
@@ -53,7 +59,7 @@ classdef KalmanFilter < handle
             predictedX = stateVec(end, 1:7)';
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
 
-            Phi = this.calcEvolutionMatrix(x0, bModel, mCtrl);
+            Phi = this.calcEvolutionMatrix(SimNum, x0, bModel, Ctrl);
             predictedP = Phi * this.P * Phi' + this.Q;
         end
 
@@ -111,7 +117,14 @@ classdef KalmanFilter < handle
             end 
         end
 
-        function Phi = calcEvolutionMatrix(this, state, bModel, mCtrl)
+        function Phi = calcEvolutionMatrix(this, SimNum, state, bModel, Ctrl)
+
+            if SimNum == 1
+                Fmagn = 2 * skewSymm(Ctrl) * skewSymm(bModel);
+            elseif SimNum == 2
+                Fmagn = 2 * skewSymm(Ctrl);
+            end
+
             q = state(1:4);
             omega = state(5:7);
             omegaRel = omega - quatRotate(q, [0; this.orb.meanMotion; 0]);
@@ -123,7 +136,7 @@ classdef KalmanFilter < handle
 
             Fgyr = skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J;
 
-            Fmagn = 2 * skewSymm(mCtrl) * skewSymm(bModel);
+            Fmagn = 2 * skewSymm(Ctrl) * skewSymm(bModel);
 
             F1 = [-skewSymm(omegaRel), 0.5 * eye(3)];
             F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr];
