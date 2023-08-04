@@ -31,10 +31,9 @@ classdef KalmanFilter < handle
         function estimatedX = estimate(this, SimNum, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_Model0, SS_Vec_ModelT)
 
             [predictedX, predictedP] = this.prediction(SimNum, t0, x0, bModel0, Ctrl);
-            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor);
 
+            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor);
         end
-        
 
         function [predictedX, predictedP] = prediction(this, SimNum, t0, x0, bModel0, Ctrl)
             bModel = quatRotate(x0(1:4), bModel0);
@@ -44,17 +43,17 @@ classdef KalmanFilter < handle
             elseif SimNum == 2
                 ctrlTorque = Ctrl;
             end 
-    
-            % Actuator on
+
+            % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, ctrlTorque), ...
                                     timeInterval, x0, this.odeOptions);
 
-            % Actuator off
-            x0 = stateVec(end, 1:7)';
+            % magnetorquers off
+            x1 = stateVec(end, 1:7)';
             timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
-                                    timeInterval, x0, this.odeOptions);
+                                    timeInterval, x1, this.odeOptions);
 
             predictedX = stateVec(end, 1:7)';
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
@@ -64,20 +63,18 @@ classdef KalmanFilter < handle
         end
 
         function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor,SS_Vec_ModelT,SS_Vec_Sensor)
-
             bModelBody = quatRotate(predictedX(1:4), bModelT);
             SS_Vec_ModelT_body = quatRotate(predictedX(1:4),SS_Vec_ModelT); 
 
             bModelNorm = vecnorm(bModelBody);
             SunModelNorm = vecnorm(SS_Vec_ModelT_body);
-            
+
             if ~isempty(this.sat.ss) 
-                z = [bSensor / bModelNorm ; SS_Vec_Sensor/norm(SS_Vec_Sensor)]; 
-                Hx = [bModelBody / bModelNorm ; SS_Vec_ModelT_body/SunModelNorm];        
-            
+               z = [bSensor / bModelNorm ; SS_Vec_Sensor/norm(SS_Vec_Sensor)]; 
+               Hx = [bModelBody / bModelNorm ; SS_Vec_ModelT_body/SunModelNorm];   
             elseif isempty(this.sat.ss)
-                z = bSensor / bModelNorm;
-                Hx = bModelBody / bModelNorm;
+               z = bSensor / bModelNorm;
+               Hx = bModelBody / bModelNorm;
             end 
 
             H = this.calcObservationMatrix(bModelBody/bModelNorm,SS_Vec_ModelT_body/SunModelNorm);
@@ -109,8 +106,8 @@ classdef KalmanFilter < handle
 
         function initMeasurementsCovariance(this)
             if ~isempty(this.sat.ss)  
-                this.R = [diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma), zeros(3);
-                          zeros(3), diag(this.sat.ss.noiseSigma .* this.sat.ss.noiseSigma)];
+                this.R = [diag((this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma)), zeros(3);
+                          zeros(3), diag((this.sat.ss.noiseSigma .* this.sat.ss.noiseSigma))];
 
             elseif isempty(this.sat.ss) 
                 this.R = diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma);
@@ -127,7 +124,6 @@ classdef KalmanFilter < handle
 
             q = state(1:4);
             omega = state(5:7);
-            omegaRel = omega - quatRotate(q, [0; this.orb.meanMotion; 0]);
 
             e3 = quatRotate(q, [0, 0, 1]);
 
@@ -136,9 +132,7 @@ classdef KalmanFilter < handle
 
             Fgyr = skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J;
 
-            Fmagn = 2 * skewSymm(Ctrl) * skewSymm(bModel);
-
-            F1 = [-skewSymm(omegaRel), 0.5 * eye(3)];
+            F1 = [-skewSymm(omega), 0.5 * eye(3)];
             F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr];
 
             F = [F1; F2];
@@ -147,18 +141,18 @@ classdef KalmanFilter < handle
         end
 
         function H = calcObservationMatrix(this, bModel,Sun_Model)
-            if ~isempty(this.sat.ss)
+           if ~isempty(this.sat.ss)
                 H = [2 * skewSymm(bModel) zeros(3); 2*skewSymm(Sun_Model) zeros(3)];  
 
-            elseif isempty(this.sat.ss)
+           elseif isempty(this.sat.ss)
                 H = [2 * skewSymm(bModel), zeros(3)];
-            end 
+           end 
         end
 
-        function K = calcKalmanGain(this, P, H, bModelNorm, SunModelNorm)
+        function K = calcKalmanGain(this, P, H, bModelNorm,SunModelNorm)
             S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)];
 
-            K =  P * H' / S;
+            K =  P * H' / S;       
         end
 
     end
