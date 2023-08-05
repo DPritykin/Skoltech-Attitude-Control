@@ -12,7 +12,7 @@ classdef SunSensor < AbstractSensor
                 parameters.sigma {mustBeNumeric} = deg2rad(0.2);
                 parameters.position {mustBeNumeric} = [2; 2; -3] * 1e-2;
                 parameters.dcm {mustBeNumeric} = eye(3);
-                parameters.fov {mustBeNumeric} = 120;
+                parameters.fov {mustBeNumeric} = deg2rad(120);
                 parameters.boresightDirection {mustBeNumeric} = [0; 0; -1];
             end
 
@@ -36,27 +36,29 @@ classdef SunSensor < AbstractSensor
         function [val,intensity] = getSensorReadings(this, trueValue)
             % trueValue - sun vector in the body frame 
 
-            randomVector = rand(3, 1);
-            eAxis = cross(trueValue, randomVector);
-            eAxis = eAxis / norm(eAxis);
+            % sunSensorNormal = this.boresightDirection;
+
+                cos_incident_angle = dot(trueValue, this.boresightDirectionSatRF);
+
+                randomVector = rand(3, 1);
+                eAxis = cross(trueValue, randomVector);
+                eAxis = eAxis / norm(eAxis);
             
-            rotationAngle = normrnd(0, this.noiseSigma);
+                rotationAngle = normrnd(0, this.noiseSigma);
             
-            % As all the three axes are assumed to have the same sigma 
-            rotationQuaternion = [cos(rotationAngle(1)/2); eAxis*sin(rotationAngle(1)/2)];
+                % As all the three axes are assumed to have the same sigma 
+                rotationQuaternion = [cos(rotationAngle(1)/2); eAxis*sin(rotationAngle(1)/2)];
 
-            rotatedVector = quatRotate(rotationQuaternion, trueValue);
-            val = rotatedVector + this.bias;
-
-            sunSensorNormal = this.boresightDirection;
-            cos_incident_angle = dot(rotatedVector, sunSensorNormal);
-
-            % Calculating intensity (proportional to the incident angle cosine when in fov)
-            if cos_incident_angle >= cos(this.fov)
-                intensity = cos_incident_angle;
-            else
-                intensity = 0;
-            end
+                rotatedVector = quatRotate(rotationQuaternion, trueValue);
+                val = rotatedVector + this.bias;
+                
+             if acos(cos_incident_angle) <= this.fov/2
+                intensity = cos_incident_angle;   
+               
+             else
+%                 val = [0;0;0];
+                intensity = 0;  
+             end
         end
     end
 end
