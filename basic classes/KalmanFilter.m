@@ -28,37 +28,45 @@ classdef KalmanFilter < handle
             this.initMeasurementsCovariance();
         end
 
-        function estimatedX = estimate(this, SimNum, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_Model0, SS_Vec_ModelT)
+        function estimatedX = estimate(this, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_Model0, SS_Vec_ModelT)
 
-            [predictedX, predictedP] = this.prediction(SimNum, t0, x0, bModel0, Ctrl);
+            [predictedX, predictedP] = this.prediction(t0, x0, bModel0, Ctrl);
 
             estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor);
         end
 
-        function [predictedX, predictedP] = prediction(this, SimNum, t0, x0, bModel0, Ctrl)
+        function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, Ctrl)
             bModel = quatRotate(x0(1:4), bModel0);
 
-            if SimNum == 1
+            if ~isempty(this.sat.mtq)  
                 ctrlTorque = crossProduct(Ctrl, bModel);
-            elseif SimNum == 2
+            elseif isempty(this.sat.mtq) 
                 ctrlTorque = Ctrl;
             end 
-
+          
             % magnetorquers on
             timeInterval = [t0, t0 + this.sat.controlParams.tCtrl];
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, ctrlTorque), ...
                                     timeInterval, x0, this.odeOptions);
 
-            % magnetorquers off
-            x1 = stateVec(end, 1:7)';
-            timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
-            [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
-                                    timeInterval, x1, this.odeOptions);
+            if ~isempty(this.sat.mtq)  
 
-            predictedX = stateVec(end, 1:7)';
+                x1 = stateVec(end, 1:7)';
+                timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
+                [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
+                                        timeInterval, x1, this.odeOptions);
+
+                predictedX = stateVec(end, 1:7)';
+
+            elseif isempty(this.sat.mtq)
+
+                predictedX = stateVec(end, 1:7)';
+               
+            end 
+
             predictedX(1:4) = predictedX(1:4) / vecnorm(predictedX(1:4));
 
-            Phi = this.calcEvolutionMatrix(SimNum, x0, bModel, Ctrl);
+            Phi = this.calcEvolutionMatrix(x0, bModel, Ctrl);
             predictedP = Phi * this.P * Phi' + this.Q;
         end
 
@@ -105,7 +113,7 @@ classdef KalmanFilter < handle
         end
 
         function initMeasurementsCovariance(this)
-            if ~isempty(this.sat.ss)  
+            if ~isempty(this.sat.ss)
                 this.R = [diag((this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma)), zeros(3);
                           zeros(3), diag((this.sat.ss.noiseSigma .* this.sat.ss.noiseSigma))];
 
@@ -114,13 +122,13 @@ classdef KalmanFilter < handle
             end 
         end
 
-        function Phi = calcEvolutionMatrix(this, SimNum, state, bModel, Ctrl)
+        function Phi = calcEvolutionMatrix(this,state, bModel, Ctrl)
 
-            if SimNum == 1
+            if ~isempty(this.sat.mtq)  
                 Fmagn = 2 * skewSymm(Ctrl) * skewSymm(bModel);
-            elseif SimNum == 2
+            elseif isempty(this.sat.mtq) 
                 Fmagn = 2 * skewSymm(Ctrl);
-            end
+            end 
 
             q = state(1:4);
             omega = state(5:7);
@@ -141,7 +149,7 @@ classdef KalmanFilter < handle
         end
 
         function H = calcObservationMatrix(this, bModel,Sun_Model)
-           if ~isempty(this.sat.ss)
+           if ~isempty(this.sat.ss) 
                 H = [2 * skewSymm(bModel) zeros(3); 2*skewSymm(Sun_Model) zeros(3)];  
 
            elseif isempty(this.sat.ss)
@@ -150,7 +158,7 @@ classdef KalmanFilter < handle
         end
 
         function K = calcKalmanGain(this, P, H, bModelNorm,SunModelNorm)
-            S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)];
+            S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)/SunModelNorm^2];
 
             K =  P * H' / S;       
         end

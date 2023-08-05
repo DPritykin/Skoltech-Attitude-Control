@@ -116,7 +116,6 @@ classdef Simulation < handle
                 [ssMeasuredVector,intSS] = this.calcSSVector(t,q0);
 
                 %% state estimation (Extended Kalman filter)
-                SimNum = 1; 
                 t0 = t - this.sat.controlParams.tLoop;
 
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
@@ -131,7 +130,7 @@ classdef Simulation < handle
                 SS_Vec_Model0 = Transformed0 * SS_Vec0_icrs;
                 SS_Vec_ModelT = TransformedT * SS_VecT_icrs;
 
-                stateEst = this.ekf.estimate(SimNum,t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,ssMeasuredVector,SS_Vec_Model0,SS_Vec_ModelT);
+                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField,ssMeasuredVector,SS_Vec_Model0,SS_Vec_ModelT);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
 
@@ -191,6 +190,7 @@ classdef Simulation < handle
             stateEst = [1; 0; 0; 0; 0; 0; 0];
             simResults = zeros(12, ceil(this.simulationTime / this.sat.controlParams.tLoop));
             startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
+
             for iterIdx = 1:size(simResults, 2)
 
                 %% controlled dynamics
@@ -206,22 +206,10 @@ classdef Simulation < handle
                 omega0 = stateVec(end, 5:7)';
                 rwAngMomentum0 = stateVec(end, 8:10)';
 
-                %% measurements (RW off)
-                simTime = t + this.sat.controlParams.tMeas;
-
-                stateVec = this.integrate([t simTime], ...
-                                          [q0; omega0; rwAngMomentum0]);
-
-                t = simTime;
-                q0 = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
-                omega0 = stateVec(end, 5:7)';
-                rwAngMomentum0 = stateVec(end, 8:10)';
-
                 [mtmMeasuredField] = this.calcSensorMagnField(t, q0);
                 [ssMeasuredVector,intSS] = this.calcSSVector(t, q0);
 
                 %% state estimation (Extended Kalman filter)
-                SimNum = 2; 
                 t0 = t - this.sat.controlParams.tLoop;
 
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
@@ -236,7 +224,7 @@ classdef Simulation < handle
                 SS_Vec_Model0 = Transformed0 * SS_Vec0_icrs;
                 SS_Vec_ModelT = TransformedT * SS_VecT_icrs;
 
-                stateEst = this.ekf.estimate(SimNum, t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField,ssMeasuredVector,SS_Vec_Model0,SS_Vec_ModelT);
+                stateEst = this.ekf.estimate(t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField,ssMeasuredVector,SS_Vec_Model0,SS_Vec_ModelT);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
 
