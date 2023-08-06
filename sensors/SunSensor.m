@@ -50,13 +50,12 @@ classdef SunSensor < AbstractSensor
                 rotationQuaternion = [cos(rotationAngle(1)/2); eAxis*sin(rotationAngle(1)/2)];
 
                 rotatedVector = quatRotate(rotationQuaternion, trueValue);
-                val = rotatedVector + this.bias;
                 
              if acos(cos_incident_angle) <= this.fov/2
                 intensity = cos_incident_angle;   
-               
+                val = rotatedVector + this.bias;
              else
-%                 val = [0;0;0];
+                val = [0;0;0];
                 intensity = 0;  
              end
         end
