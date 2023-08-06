@@ -25,9 +25,9 @@ orb = CircularOrbit(env, ... % Environment object
 
 % defining control parameters
 sat.setControlParams(tMeas = 0, ...              % [s] sampling time step
-                     tCtrl = 0.15, ...               % [s] control time step
+                     tCtrl = 0.2, ...               % [s] control time step
                      qReq = [1; 0; 0; 0], ...       % [-] required orbital orientation
-                     kQ = 3.1, ...                    % [-] P gain for PID-regulator
+                     kQ = 3.05, ...                    % [-] P gain for PID-regulator
                      kW = 3.3);                     % [-] D gain for PID-regulator
 
 % adding a magnetometer
