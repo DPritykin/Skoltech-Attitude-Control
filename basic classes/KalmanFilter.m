@@ -51,6 +51,7 @@ classdef KalmanFilter < handle
 
             if ~isempty(this.sat.mtq)  
 
+                % magnetorquers off
                 x1 = stateVec(end, 1:7)';
                 timeInterval = [t0 + this.sat.controlParams.tCtrl, t0 + this.sat.controlParams.tLoop];
                 [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
@@ -77,16 +78,16 @@ classdef KalmanFilter < handle
             bModelNorm = vecnorm(bModelBody);
             SunModelNorm = vecnorm(SS_Vec_ModelT_body);
 
-            if ~isempty(this.sat.ss) 
+            if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0]
                z = [bSensor / bModelNorm ; SS_Vec_Sensor/norm(SS_Vec_Sensor)]; 
                Hx = [bModelBody / bModelNorm ; SS_Vec_ModelT_body/SunModelNorm];   
-            elseif isempty(this.sat.ss)
+            else
                z = bSensor / bModelNorm;
                Hx = bModelBody / bModelNorm;
             end 
 
-            H = this.calcObservationMatrix(bModelBody/bModelNorm,SS_Vec_ModelT_body/SunModelNorm);
-            K = this.calcKalmanGain(predictedP, H, bModelNorm,SunModelNorm);
+            H = this.calcObservationMatrix(bModelBody/bModelNorm,SS_Vec_ModelT_body/SunModelNorm,SS_Vec_Sensor);
+            K = this.calcKalmanGain(predictedP, H, bModelNorm,SunModelNorm,SS_Vec_Sensor);
 
             correctedX = K * (z - Hx);
             qCor = vec2unitQuat(correctedX(1:3));
@@ -96,8 +97,10 @@ classdef KalmanFilter < handle
             estimatedX(5:7) = predictedX(5:7) + correctedX(4:6);
 
             this.P = (eye(6) - K * H) * predictedP;
+
+            end
         end
-    end
+    
 
     methods (Access = private)
 
@@ -148,19 +151,24 @@ classdef KalmanFilter < handle
             Phi =  eye(6) + F * this.sat.controlParams.tLoop;
         end
 
-        function H = calcObservationMatrix(this, bModel,Sun_Model)
-           if ~isempty(this.sat.ss) 
+        function H = calcObservationMatrix(this, bModel,Sun_Model,SS_Vec_Sensor)
+           if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0]
                 H = [2 * skewSymm(bModel) zeros(3); 2*skewSymm(Sun_Model) zeros(3)];  
 
-           elseif isempty(this.sat.ss)
+           else
                 H = [2 * skewSymm(bModel), zeros(3)];
            end 
         end
 
-        function K = calcKalmanGain(this, P, H, bModelNorm,SunModelNorm)
-            S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)/SunModelNorm^2];
+        function K = calcKalmanGain(this, P, H, bModelNorm,SunModelNorm,SS_Vec_Sensor)
 
-            K =  P * H' / S;       
+            if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0]
+                S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)/SunModelNorm^2];
+            else
+                S = H * P * H' + [this.R(1:3,1:3)/bModelNorm^2];
+            end 
+
+                K =  P * H' / S;       
         end
 
     end
