@@ -137,9 +137,9 @@ function rmse_ekf = comparison_plots(simData,ekfData,meanMotion)
     plot(timeInHours, ekfData(11,1:end), 'Color', blue, 'LineWidth', 2)
     grid on
     xlabel('Time in hours')
-    ylabel('Magnetometer Bias [T]')
-    legend('b_x','b_y','b_z');
-    title('Magnetometer Bias Estimation')
+    ylabel('Residual Dipole [Am^2]')
+    legend('m_x','m_y','m_z');
+    title('Residual Dipole Estimation')
 
     figure;
     plot(timeInHours, ekfData(12,1:end),'Color', red, 'LineWidth', 2)
@@ -149,8 +149,20 @@ function rmse_ekf = comparison_plots(simData,ekfData,meanMotion)
     plot(timeInHours, ekfData(14,1:end), 'Color', blue, 'LineWidth', 2)
     grid on
     xlabel('Time in hours')
+    ylabel('Magnetometer Bias [T]')
+    legend('\beta_x','\beta_y','\beta_z');
+    title('Magnetometer Bias Estimation')
+
+    figure;
+    plot(timeInHours, ekfData(15,1:end),'Color', red, 'LineWidth', 2)
+    hold on
+    plot(timeInHours, ekfData(16,1:end), 'Color', green, 'LineWidth', 2)
+    hold on
+    plot(timeInHours, ekfData(17,1:end), 'Color', blue, 'LineWidth', 2)
+    grid on
+    xlabel('Time in hours')
     ylabel('Gyroscope Bias [rad/s]')
-    legend('b_x','b_y','b_z');
+    legend('\beta_x','\beta_y','\beta_z');
     title('Gyroscope Bias Estimation')
 
     rmse_ekf = [rmseRoll rmsePitch rmseYaw rmseW1 rmseW2 rmseW3];
