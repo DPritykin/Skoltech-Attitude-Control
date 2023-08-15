@@ -6,6 +6,8 @@ classdef Environment < handle
         mu0 = 1.257e-6;          % [N / A^2] vacuum permeability
         muE = 7.94e+22;          % [A * m^2] magnetic dipole moment of the Earth
         earthRadius = 6371e+3;   % [m] radius of the Earth
+        sunRadius = 696e+6       % [m] radius of the Sun
+        AU = 149.598e+9          % [m] Astronomical Unit 
         km2m = 1e3;
 
         distTorqueSigma = 0;     % [N * m] disturbance of the torque
@@ -45,7 +47,7 @@ classdef Environment < handle
             [r_Mercury,r_Venus,r_Earth,r_Mars,r_Jupiter,r_Saturn,r_Uranus, ...
             r_Neptune,r_Pluto,r_Moon,r_Sun] = JPL_Eph_DE430(Mjd_TDB);
            
-            S_Vec = r_Sun/norm(r_Sun);
+            S_Vec = r_Sun;
 
         end 
 

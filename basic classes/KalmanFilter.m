@@ -28,11 +28,11 @@ classdef KalmanFilter < handle
             this.initMeasurementsCovariance();
         end
 
-        function estimatedX = estimate(this, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_Model0, SS_Vec_ModelT)
+        function estimatedX = estimate(this, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_Model0, SS_Vec_ModelT,eclipse)
 
             [predictedX, predictedP] = this.prediction(t0, x0, bModel0, Ctrl);
 
-            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor);
+            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor,eclipse);
         end
 
         function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, Ctrl)
@@ -71,14 +71,14 @@ classdef KalmanFilter < handle
             predictedP = Phi * this.P * Phi' + this.Q;
         end
 
-        function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor,SS_Vec_ModelT,SS_Vec_Sensor)
+        function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor, eclipse)
             bModelBody = quatRotate(predictedX(1:4), bModelT);
             SS_Vec_ModelT_body = quatRotate(predictedX(1:4),SS_Vec_ModelT); 
 
             bModelNorm = vecnorm(bModelBody);
             SunModelNorm = vecnorm(SS_Vec_ModelT_body);
 
-            if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0]
+            if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0] & eclipse ~= 1
                z = [bSensor / bModelNorm ; SS_Vec_Sensor/norm(SS_Vec_Sensor)]; 
                Hx = [bModelBody / bModelNorm ; SS_Vec_ModelT_body/SunModelNorm];   
             else
@@ -86,8 +86,8 @@ classdef KalmanFilter < handle
                Hx = bModelBody / bModelNorm;
             end 
 
-            H = this.calcObservationMatrix(bModelBody/bModelNorm,SS_Vec_ModelT_body/SunModelNorm,SS_Vec_Sensor);
-            K = this.calcKalmanGain(predictedP, H, bModelNorm,SunModelNorm,SS_Vec_Sensor);
+            H = this.calcObservationMatrix(bModelBody/bModelNorm,SS_Vec_ModelT_body/SunModelNorm,SS_Vec_Sensor,eclipse);
+            K = this.calcKalmanGain(predictedP, H, bModelNorm,SunModelNorm,SS_Vec_Sensor,eclipse);
 
             correctedX = K * (z - Hx);
             qCor = vec2unitQuat(correctedX(1:3));
@@ -151,8 +151,8 @@ classdef KalmanFilter < handle
             Phi =  eye(6) + F * this.sat.controlParams.tLoop;
         end
 
-        function H = calcObservationMatrix(this, bModel,Sun_Model,SS_Vec_Sensor)
-           if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0]
+        function H = calcObservationMatrix(this, bModel,Sun_Model,SS_Vec_Sensor,eclipse)
+           if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0] & eclipse ~= 1
                 H = [2 * skewSymm(bModel) zeros(3); 2*skewSymm(Sun_Model) zeros(3)];  
 
            else
@@ -160,9 +160,9 @@ classdef KalmanFilter < handle
            end 
         end
 
-        function K = calcKalmanGain(this, P, H, bModelNorm,SunModelNorm,SS_Vec_Sensor)
+        function K = calcKalmanGain(this, P, H, bModelNorm,SunModelNorm,SS_Vec_Sensor,eclipse)
 
-            if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0]
+            if ~isempty(this.sat.ss) & SS_Vec_Sensor ~= [0;0;0] & eclipse ~= 1
                 S = H * P * H' + [this.R(1:3,:)/bModelNorm^2; this.R(4:6,:)/SunModelNorm^2];
             else
                 S = H * P * H' + [this.R(1:3,1:3)/bModelNorm^2];

@@ -53,5 +53,5 @@ classdef CircularOrbit < handle
         function eci2orbMatrix = eci2orb(this, argLat)
             eci2orbMatrix = this.orb2eci(argLat)';
         end
-    end
+    end 
 end
