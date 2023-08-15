@@ -24,10 +24,10 @@ orb = CircularOrbit(env, ... % Environment object
 %  sat = Satellite(diag([0.015 0.014 0.007])); % [kg * m^2] inertia tensor for satellite
 
 % defining control parameters
-sat.setControlParams(tMeas = 0, ...              % [s] sampling time step
-                     tCtrl = 0.2, ...               % [s] control time step
+sat.setControlParams(tMeas = 0, ...                 % [s] sampling time step
+                     tCtrl = 0.1, ...               % [s] control time step
                      qReq = [1; 0; 0; 0], ...       % [-] required orbital orientation
-                     kQ = 3.05, ...                    % [-] P gain for PID-regulator
+                     kQ = 3, ...                    % [-] P gain for PID-regulator
                      kW = 3.3);                     % [-] D gain for PID-regulator
 
 % adding a magnetometer
@@ -78,15 +78,27 @@ sim.setFilter(ekf);
 %% simulation loop
 simResults = sim.run(SimulationType.rwControl);
 
-plotResults(simResults);
-
+% plotResults(simResults);
+plotResults(simResults, sim.orb.meanMotion);
 %% plotter
-function plotResults(simData)
+function plotResults(simData, meanMotion)
     [pitch, roll, yaw] = quat2angle(simData(2:5, 1:end)', 'YXZ');
     
     pitch = rad2deg(pitch);
     roll = rad2deg(roll);
     yaw = rad2deg(yaw);
+
+    len = length(pitch);
+    startIndex = round(len * 3 / 4);
+    
+    ref0 = zeros(len, 1);
+    
+    rmseRoll = sqrt(immse(roll(startIndex:end), ref0(startIndex:end)));
+    rmsePitch = sqrt(immse(pitch(startIndex:end), ref0(startIndex:end)));
+    rmseYaw = sqrt(immse(yaw(startIndex:end), ref0(startIndex:end)));
+    rmseW1 = sqrt(immse(simData(6, startIndex:end)', ref0(startIndex:end)));
+    rmseW2 = sqrt(immse(simData(7, startIndex:end)' - meanMotion, ref0(startIndex:end)));
+    rmseW3 = sqrt(immse(simData(8, startIndex:end)', ref0(startIndex:end)));
 
     red = [203/255, 37/255, 37/255];
     green = [138/255, 181/255, 73/255];
@@ -95,7 +107,7 @@ function plotResults(simData)
     timeInSeconds = simData(1, :);
     
     figure
-    subplot(1, 3, 1)
+    subplot(2, 3, 1)
     plot(timeInSeconds, pitch, 'Color', red, 'LineWidth', 2)
     hold on
     plot(timeInSeconds, roll, 'Color', green, 'LineWidth', 2)
@@ -105,8 +117,22 @@ function plotResults(simData)
     xlabel('Time in seconds')
     ylabel('Euler Angles, [deg]')
     legend('pitch','roll','yaw');
-
-    subplot(1, 3, 2) % angular velocity
+    
+    subplot(2, 3, 4)
+    plot(timeInSeconds(startIndex:end), pitch(startIndex:end), 'Color', red, 'LineWidth', 2)
+    hold on
+    plot(timeInSeconds(startIndex:end), roll(startIndex:end), 'Color', green, 'LineWidth', 2)
+    hold on
+    plot(timeInSeconds(startIndex:end), yaw(startIndex:end), 'Color', blue, 'LineWidth', 2)
+    grid on
+    xlabel('Time in seconds')
+    ylabel('Euler Angles Errors, [deg]')
+    legend_p = ['RMSE_{pitch} = ', num2str(rmsePitch, '%10.2e\n')];
+    legend_r = ['RMSE_{roll} = ', num2str(rmseRoll, '%10.2e\n')];
+    legend_y = ['RMSE_{yaw} = ', num2str(rmseYaw, '%10.2e\n')];
+    legend(legend_p, legend_r, legend_y);
+    
+    subplot(2, 3, 2) % angular velocity
     plot(timeInSeconds, simData(6, 1:end), 'Color', red, 'LineWidth', 2)
     hold on
     plot(timeInSeconds, simData(7, 1:end), 'Color', green, 'LineWidth', 2)
@@ -116,8 +142,22 @@ function plotResults(simData)
     xlabel('Time in seconds')
     ylabel('Angular Velocity Components, [rad/sec]')
     legend('\omega_1','\omega_2','\omega_3');
-       
-    subplot(1, 3, 3) % quaternion
+    
+    subplot(2, 3, 5) % angular velocity
+    plot(timeInSeconds(startIndex:end), simData(6, startIndex:end), 'Color', red, 'LineWidth', 2)
+    hold on
+    plot(timeInSeconds(startIndex:end), (simData(7, startIndex:end) - meanMotion), 'Color', green, 'LineWidth', 2)
+    hold on
+    plot(timeInSeconds(startIndex:end), simData(8, startIndex:end), 'Color', blue, 'LineWidth', 2)
+    grid on
+    xlabel('Time in seconds')
+    ylabel('Angular Velocity Errors, [rad/sec]')
+    legend_1 = ['RMSE_{\omega_1} = ', num2str(rmseW1, '%10.2e\n')];
+    legend_2 = ['RMSE_{omega_2} = ', num2str(rmseW2, '%10.2e\n')];
+    legend_3 = ['RMSE_{\omega_3} = ', num2str(rmseW3, '%10.2e\n')];
+    legend(legend_1, legend_2, legend_3);
+    
+    subplot(2, 3, 3) % quaternion
     plot(timeInSeconds, simData(2, 1:end), 'k', 'LineWidth', 2)
     hold on
     plot(timeInSeconds, simData(3, 1:end), 'Color', red, 'LineWidth', 2)
@@ -129,4 +169,10 @@ function plotResults(simData)
     xlabel('Time in seconds')
     ylabel('Quaternion Components')
     legend('q0','q1','q2','q3');
+
+    subplot(2, 3, 6) % Sun Sensor Intensity
+    plot(timeInSeconds, simData(9, 1:end), 'k', 'LineWidth', 2)
+    grid on
+    xlabel('Time in seconds')
+    ylabel('Sun Sensor Intensity')
 end
