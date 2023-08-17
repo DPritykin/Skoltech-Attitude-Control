@@ -113,7 +113,7 @@ classdef Simulation < handle
                 omega0 = stateVec(end, 5:7)';
 
                 [mtmMeasuredField] = this.calcSensorMagnField(t, q0);
-                [ssMeasuredVector,intSS] = this.calcSSVector(t,q0,startTime);
+                [ssMeasuredVector, intSS] = this.calcSSVector(t, q0, startTime);
 
                 %% state estimation (Extended Kalman filter)
                 t0 = t - this.sat.controlParams.tLoop;
@@ -121,9 +121,9 @@ classdef Simulation < handle
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
 
-                SS_Vec0_icrs = this.env.SunVecCalc(t0,startTime);
+                SS_Vec0_icrs = this.env.SunVecCalc(t0, startTime);
                 SS_Vec0_icrs = SS_Vec0_icrs/norm(SS_Vec0_icrs);
-                SS_VecT_icrs = this.env.SunVecCalc(t,startTime);
+                SS_VecT_icrs = this.env.SunVecCalc(t, startTime);
                 SS_VecT_icrs = SS_VecT_icrs/norm(SS_VecT_icrs);
                 
                 Transformed0 = this.orb.eci2orb(this.orb.meanMotion * t0);
@@ -219,20 +219,14 @@ classdef Simulation < handle
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
 
-                SS_Vec0_icrs = this.env.SunVecCalc(t0,startTime);
-                SS_Vec0_icrs = SS_Vec0_icrs/norm(SS_Vec0_icrs);
-                SS_VecT_icrs = this.env.SunVecCalc(t,startTime);
-                SS_VecT_icrs = SS_VecT_icrs/norm(SS_VecT_icrs);
-
-                Transformed0 = this.orb.eci2orb(this.orb.meanMotion * t0);
+                SS_VecT_icrs = this.env.SunVecCalc(t, startTime);
+                SS_VecT_icrs = SS_VecT_icrs / vecnorm(SS_VecT_icrs);
                 TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
-
-                SS_Vec_Model0 = Transformed0 * SS_Vec0_icrs;
                 SS_Vec_ModelT = TransformedT * SS_VecT_icrs;
 
-                eclipse = sunEclipse(this,t0,startTime);
+                eclipse = sunEclipse(this, t0, startTime);
 
-                stateEst = this.ekf.estimate(t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField, ssMeasuredVector,SS_Vec_Model0,SS_Vec_ModelT,eclipse);
+                stateEst = this.ekf.estimate(t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT, eclipse);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
 
@@ -285,36 +279,36 @@ classdef Simulation < handle
             [sensedMagnField,~] = this.sat.mtm.getSensorReadings(envMagnField);
         end
 
-        function [sensedSunVec,intSS] = calcSSVector(this, t, q, startTime)
+        function [sensedSunVec, intSS] = calcSSVector(this, t, q, startTime)
 
             TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
             SunVecICRS = this.env.SunVecCalc(t,startTime);
-            SunVecICRS = SunVecICRS/norm(SunVecICRS);
+            SunVecICRS = SunVecICRS / vecnorm(SunVecICRS);
             SunVec = TransformedT * SunVecICRS;
             [sensedSunVec,intSS] = this.sat.ss.getSensorReadings(quatRotate(q, SunVec));
 
         end
 
-        function eclipse = sunEclipse(this,t,startTime)
-
+        function eclipse = sunEclipse(this, t, startTime)
+            % this should probably go to env class
             TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
-            SunVecICRS = this.env.SunVecCalc(t,startTime);
+            SunVecICRS = this.env.SunVecCalc(t, startTime);
             SunVecAbs = TransformedT * SunVecICRS;
-            mag_rSun = sqrt(SunVecAbs(1)^2 + SunVecAbs(2)^2 + SunVecAbs(3)^2);
+            mag_rSun = vecnorm(SunVecAbs);
 
-            [ePos, eVel] = this.orb.calcUnitPosVel(this.orb.meanMotion * t);
-            ePosAbs = ePos.*[this.orb.orbitRadius; 0; 0];
+            [ePos, ~] = this.orb.calcUnitPosVel(this.orb.meanMotion * t);
+            ePosAbs = ePos .* [this.orb.orbitRadius; 0; 0];
             mag_rSat = sqrt(ePosAbs(1)^2 + ePosAbs(2)^2 + ePosAbs(3)^2);
             
-            x1 = this.env.earthRadius*this.env.AU/(this.env.sunRadius + this.env.earthRadius);
-            x2 = this.env.earthRadius*this.env.AU/(this.env.sunRadius - this.env.earthRadius);
+            x1 = this.env.earthRadius * this.env.AU / (this.env.sunRadius + this.env.earthRadius);
+            x2 = this.env.earthRadius * this.env.AU / (this.env.sunRadius - this.env.earthRadius);
 
-            alpha1 = pi - acos(this.env.earthRadius/x1) - acos(this.env.earthRadius/mag_rSat);
-            alpha2 = acos(this.env.earthRadius/x2) - acos(this.env.earthRadius/mag_rSat);
-            alpha = pi - acos(dotProduct(SunVecAbs,ePosAbs)/(mag_rSun*mag_rSat));
+            alpha1 = pi - acos(this.env.earthRadius / x1) - acos(this.env.earthRadius / mag_rSat);
+            alpha2 = acos(this.env.earthRadius / x2) - acos(this.env.earthRadius / mag_rSat);
+            alpha = pi - acos(dotProduct(SunVecAbs, ePosAbs) / (mag_rSun * mag_rSat));
 
-            if alpha2 < alpha < alpha1  % Satellite in Penumbral Regrion
-                eclipse = 1;
+            if alpha2 < alpha && alpha < alpha1  % Satellite in Penumbral Regrion
+                eclipse = 1; % you probably do not need this penumbral condition
             elseif alpha < alpha2       % Satellite in Umbral Region
                 eclipse = 1;
             else 

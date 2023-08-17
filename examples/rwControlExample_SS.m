@@ -42,7 +42,7 @@ ss = SunSensor(bias = [0; 0; 0;], ...               % [rad] sun sensor bias
                sigma = deg2rad(0.2), ...            % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
                position = [2; 2; -3] * 1e-2, ...    % [m] sun sensor position in the body-frame
                dcm = eye(3), ...                    % dcm from sensor's axes to the host satellite body frame
-               fov = deg2rad(120), ...              % [deg] sun sensor field of view constraint 
+               fovDeg = 120, ...                    % [deg] sun sensor field of view constraint 
                boresightDirection = [0; 0; -1]);    % center of sun sensor's FOV                   
 
 sat.setSunSensor(ss);
