@@ -1,8 +1,8 @@
 % An example of a satellite (3U CubeSat) in a circular orbit
 % required attitude - orbital
-% adcs sensor - none
+% adcs sensor - magnetometer, sun sensor 
 % adcs actuators - 3 reaction wheels
-% adcs state determination - none
+% adcs state determination - Extended Kalman Filter
 
 clc
 clear
@@ -20,14 +20,15 @@ orb = CircularOrbit(env, ... % Environment object
 
 %% satellite settings
 
- sat = Satellite([0.05466 -0.04e-3 -0.06e-3; -0.04e-3 0.05531 0.29e-3; -0.06e-3 0.29e-3 0.01201]); % [kg * m^2] inertia tensor for satellite
-%  sat = Satellite(diag([0.015 0.014 0.007])); % [kg * m^2] inertia tensor for satellite
+ sat = Satellite([0.05466 -0.04e-3 -0.06e-3; ...
+                  -0.04e-3 0.05531 0.29e-3; ...
+                  -0.06e-3 0.29e-3 0.01201]); % [kg * m^2] inertia tensor for satellite
 
 % defining control parameters
 sat.setControlParams(tMeas = 0, ...                 % [s] sampling time step
                      tCtrl = 0.1, ...               % [s] control time step
                      qReq = [1; 0; 0; 0], ...       % [-] required orbital orientation
-                     kQ = 3, ...                    % [-] P gain for PID-regulator
+                     kQ = 3.1, ...                  % [-] P gain for PID-regulator
                      kW = 3.3);                     % [-] D gain for PID-regulator
 
 % adding a magnetometer
@@ -38,18 +39,18 @@ mtm = Magnetometer(bias = [0; 0; 0;], ...           % [T] magnetometer bias
 sat.setMagnetometer(mtm);
 
 % adding a sun sensor 
-ss = SunSensor(bias = [0; 0; 0;], ...               % [rad] sun sensor bias
-               sigma = deg2rad(0.2), ...            % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
-               position = [2; 2; -3] * 1e-2, ...    % [m] sun sensor position in the body-frame
-               dcm = eye(3), ...                    % dcm from sensor's axes to the host satellite body frame
-               fov = deg2rad(120), ...              % [deg] sun sensor field of view constraint 
-               boresightDirection = [0; 0; -1]);    % center of sun sensor's FOV                   
+ss = SunSensor(bias = [0; 0; 0;], ...                % [rad] sun sensor bias
+               sigma = deg2rad(0.2), ...             % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
+               position = [2; 2; -3] * 1e-2, ...     % [m] sun sensor position in the body-frame
+               dcm = eye(3), ...                     % dcm from sensor's axes to the host satellite body frame
+               fovDeg = 120, ...                     % [deg] sun sensor field of view constraint 
+               boresightDirection = [0; 0; 1]);      % center of sun sensor's FOV)                      
 
 sat.setSunSensor(ss);
 
 % defining a reaction wheel
-rw = ReactionWheel(maxTorque = 1e-3, ...        % [Nm] max torque RW can produce
-                   maxAngMomentum = 1e-2);      % [Nms] max angular momentum RW can have
+rw = ReactionWheel(maxTorque = 1e-3, ...             % [Nm] max torque RW can produce
+                   maxAngMomentum = 1e-2);           % [Nms] max angular momentum RW can have
 
 % setting up an array of 3 identical RWs onboard of the sat
 standardRwArray = RwArray(baselineRw = rw, ...         % a ReactionWheel object
