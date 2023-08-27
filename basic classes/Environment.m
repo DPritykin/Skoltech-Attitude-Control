@@ -79,5 +79,28 @@ classdef Environment < handle
         function val = getDisturbanceTorque(this)
             val = normrnd(0, this.distTorqueSigma, [3, 1]);
         end        
+
+        function eclipse = sunEclipse(this, TransformedT, ePosAbs, t, startTime)
+
+            SunVecICRS = this.SunVecCalc(t, startTime);
+            SunVecAbs = TransformedT * SunVecICRS;
+            mag_rSun = vecnorm(SunVecAbs);
+
+            mag_rSat = sqrt(ePosAbs(1)^2 + ePosAbs(2)^2 + ePosAbs(3)^2);
+            
+            x1 = this.earthRadius * this.AU / (this.sunRadius + this.earthRadius);
+            x2 = this.earthRadius * this.AU / (this.sunRadius - this.earthRadius);
+
+            % alpha1 = pi - acos(this.earthRadius / x1) - acos(this.earthRadius / mag_rSat);
+            alpha2 = acos(this.earthRadius / x2) - acos(this.earthRadius / mag_rSat);
+            alpha  = pi - acos(dotProduct(SunVecAbs, ePosAbs) / (mag_rSun * mag_rSat));
+
+            if alpha < alpha2       % Satellite in Umbral Region
+                eclipse = 1;
+            else 
+                eclipse = 0;
+            end 
+
+        end
     end
 end
