@@ -58,14 +58,6 @@ classdef Satellite < handle
             end
         end
 
-        function setSunSensor(this, ss)
-            if isa(ss, 'SunSensor')
-                this.ss = ss;
-            else
-                error('Satellite:InvalidSS', 'Invalid SunSensor object!');
-            end
-        end
-
         function setGyroscope(this, gyro)
             if isa(gyro, 'Gyroscope')
                 this.gyro = gyro;
@@ -87,6 +79,14 @@ classdef Satellite < handle
                 this.rw = rwArray;
             else
                 error('Satellite:InvalidRw', 'Invalid Reaction Wheels Array object!');
+            end
+        end
+
+        function setSSArray(this, SSArray)
+            if isa(SSArray, 'SSArray')
+                this.ss = SSArray;
+            else
+                error('Satellite:InvalidSS', 'Invalid Sun Sensors Array object!');
             end
         end
 

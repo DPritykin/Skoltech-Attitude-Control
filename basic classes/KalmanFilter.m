@@ -32,7 +32,7 @@ classdef KalmanFilter < handle
 
             [predictedX, predictedP] = this.prediction(t0, x0, bModel0, Ctrl);
 
-            if ~isempty(this.sat.ss) && ~any(isnan(SS_Vec_Sensor)) 
+            if ~isempty(this.sat.ss) & ~any(isnan(SS_Vec_Sensor)) 
                 Con = true;
             else 
                 Con = false;
@@ -126,7 +126,7 @@ classdef KalmanFilter < handle
         function initMeasurementsCovariance(this)
             if ~isempty(this.sat.ss)
                 this.R = [diag((this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma)), zeros(3);
-                          zeros(3), diag((this.sat.ss.noiseSigma .* this.sat.ss.noiseSigma))];
+                          zeros(3), diag((this.sat.ss.sunsensors(1).noiseSigma .* this.sat.ss.sunsensors(1).noiseSigma))];
 
             elseif isempty(this.sat.ss) 
                 this.R = diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma);
