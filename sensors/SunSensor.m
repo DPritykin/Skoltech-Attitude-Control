@@ -4,7 +4,6 @@ classdef SunSensor < AbstractSensor
         fov                       % [deg] sun sensor field of view constraint 
         boresightDirection        % center of sun sensor's FOV  
         boresightDirectionSatRF   % center of sun sensor's FOV in Sat Ref Frame 
-        env
     end
 
     methods
@@ -12,7 +11,6 @@ classdef SunSensor < AbstractSensor
             arguments
                 parameters.bias {mustBeNumeric} = [0; 0; 0];
                 parameters.sigma {mustBeNumeric} = deg2rad(0.2);
-                parameters.position {mustBeNumeric} = [0; 0; 0];
                 parameters.dcm {mustBeNumeric} = eye(3);
                 parameters.fovDeg {mustBeNumeric} = 120;
                 parameters.boresightDirection {mustBeNumeric} = [0; 0; 1];
@@ -26,18 +24,30 @@ classdef SunSensor < AbstractSensor
                 this.noiseSigma = repmat(parameters.sigma(1), 3, 1);
             end
 
-            this.position                = parameters.position;
-
             this.fov                     = deg2rad(parameters.fovDeg);
 
             this.setBoresightDirection(parameters.boresightDirection);
             this.setDcm(parameters.dcm);
         end
 
+        function setbias(this, bias)
+            this.bias = bias;
+        end
+
+        function setnoiseSigma(this, noiseSigma)
+            this.noiseSigma = noiseSigma;
+        end 
+
+        function setfov(this, fov)
+            this.fov = fov;
+        end 
+
+        function setboresightDirection(this, boresightDirection)
+            this.boresightDirection = boresightDirection;
+        end 
+
         function [val, intensity] = getSensorReadings(this, trueSunDirection, sunEclipse)
             % trueSunDirection - sun vector in the body frame
-
-            % sunSensorNormal = this.boresightDirection;
 
             sunIncidentAngleCos = dot(trueSunDirection, this.boresightDirectionSatRF);
 
@@ -52,7 +62,6 @@ classdef SunSensor < AbstractSensor
 
             rotatedVector = quatRotate(rotationQuaternion, trueSunDirection);
 
-
             if acos(sunIncidentAngleCos) <= this.fov/2 && sunEclipse == 0
                 intensity = sunIncidentAngleCos;
                 val = rotatedVector + this.bias;
@@ -66,7 +75,7 @@ classdef SunSensor < AbstractSensor
         function setDcm(this, dcm)
             arguments
                 this
-                dcm(3, 3) {mustBeNumeric} = eye(3)
+                dcm(3, 3) {mustBeNumeric} 
             end
 
             if abs(det(dcm) - 1) > 1e-10
