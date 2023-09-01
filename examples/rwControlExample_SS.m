@@ -20,9 +20,9 @@ orb = CircularOrbit(env, ... % Environment object
 
 %% satellite settings
 
- sat = Satellite([0.05466 -0.04e-3 -0.06e-3; ...
+sat = Satellite([0.05466 -0.04e-3 -0.06e-3; ...
                   -0.04e-3 0.05531 0.29e-3; ...
-                  -0.06e-3 0.29e-3 0.01201]); % [kg * m^2] inertia tensor for satellite
+                  -0.06e-3 0.29e-3 0.01201]);       % [kg * m^2] inertia tensor for satellite
 
 % defining control parameters
 sat.setControlParams(tMeas = 0, ...                 % [s] sampling time step
@@ -39,22 +39,30 @@ mtm = Magnetometer(bias = [0; 0; 0;], ...           % [T] magnetometer bias
 sat.setMagnetometer(mtm);
 
 % adding a sun sensor 
-ss = SunSensor(bias = [0; 0; 0;], ...                % [rad] sun sensor bias
-               sigma = deg2rad(0.2), ...             % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
-               position = [2; 2; -3] * 1e-2, ...     % [m] sun sensor position in the body-frame
-               dcm = eye(3), ...                     % dcm from sensor's axes to the host satellite body frame
-               fovDeg = 120, ...                     % [deg] sun sensor field of view constraint 
-               boresightDirection = [0; 0; 1]);      % center of sun sensor's FOV)                      
+ss = SunSensor(bias = [0; 0; 0;], ...               % [rad] sun sensor bias
+               sigma = deg2rad(0.2), ...            % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
+               dcm = eye(3), ...                    % dcm from sensor's axes to the host satellite body frame
+               fovDeg = 120, ...                    % [deg] sun sensor field of view constraint 
+               boresightDirection = [0; 0; 1]);     % center of sun sensor's FOV                      
 
-sat.setSunSensor(ss);
+% setting up an array of n sun sensors 
+sunSensorArray = SSArray(baselineSS = ss, ...           % a Sun Sensor object
+                         dcm = [eye(3); 
+                                0 0 1; 1 0 0; 0 1 0;
+                               -1 0 0; 0 0 1; 0 1 0;
+                                0 0 1; 1 0 0; 0 1 0;
+                                1 0 0; 0 0 -1; 0 1 0], ...
+                         sensorCount = 5);
+
+sat.setSSArray(sunSensorArray);
 
 % defining a reaction wheel
-rw = ReactionWheel(maxTorque = 1e-3, ...             % [Nm] max torque RW can produce
-                   maxAngMomentum = 1e-2);           % [Nms] max angular momentum RW can have
+rw = ReactionWheel(maxTorque = 1e-3, ...                 % [Nm] max torque RW can produce
+                   maxAngMomentum = 1e-2);               % [Nms] max angular momentum RW can have
 
 % setting up an array of 3 identical RWs onboard of the sat
-standardRwArray = RwArray(baselineRw = rw, ...         % a ReactionWheel object
-                          doStandardXyzArray = true);  % 3 RWs along the X, y, and Z axes of the satellite body-frame
+standardRwArray = RwArray(baselineRw = rw, ...           % a ReactionWheel object
+                          doStandardXyzArray = true);    % 3 RWs along the X, y, and Z axes of the satellite body-frame
 
 sat.setRwArray(standardRwArray);
 
@@ -172,7 +180,7 @@ function plotResults(simData, meanMotion)
     legend('q0','q1','q2','q3');
 
     subplot(2, 3, 6) % Sun Sensor Intensity
-    plot(timeInSeconds, simData(9, 1:end), 'k', 'LineWidth', 2)
+    plot(timeInSeconds, simData(12:16, 1:end), 'LineWidth', 1)
     grid on
     xlabel('Time in seconds')
     ylabel('Sun Sensor Intensity')
