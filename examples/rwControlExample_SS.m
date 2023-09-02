@@ -180,7 +180,7 @@ function plotResults(simData, meanMotion)
     legend('q0','q1','q2','q3');
 
     subplot(2, 3, 6) % Sun Sensor Intensity
-    plot(timeInSeconds, simData(12:16, 1:end), 'LineWidth', 1)
+    plot(timeInSeconds, simData(12, 1:end), 'LineWidth', 1)
     grid on
     xlabel('Time in seconds')
     ylabel('Sun Sensor Intensity')
