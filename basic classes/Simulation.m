@@ -190,7 +190,7 @@ classdef Simulation < handle
             t = 0;
             rwCtrl = [0; 0; 0];
             stateEst = [1; 0; 0; 0; 0; 0; 0];
-            simResults = zeros(16, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            simResults = zeros(12, ceil(this.simulationTime / this.sat.controlParams.tLoop));
             startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
 
             for iterIdx = 1:size(simResults, 2)
@@ -287,7 +287,7 @@ classdef Simulation < handle
             SunVecICRS = this.env.SunVecCalc(t,startTime);
             SunVecICRS = SunVecICRS / vecnorm(SunVecICRS);
             SunVec = TransformedT * SunVecICRS;
-            [sensedSunVec,intSS] = this.sat.ss.getSensorReadingsArray(quatRotate(q, SunVec), eclipse);
+            [sensedSunVec, intSS] = this.sat.ss.getSensorReadingsArray(quatRotate(q, SunVec), eclipse);
 
         end
 
