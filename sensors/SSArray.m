@@ -25,7 +25,7 @@ classdef SSArray < handle
                 this.sunsensors = SSArray;
         end
 
-        function [direction, intensity] = getSensorReadingsArray(this, sunDirection, sunEclipse)
+        function [maxDirection, maxIntensity] = getSensorReadingsArray(this, sunDirection, sunEclipse)
             nSensors = numel(this.sunsensors);
             intensity = zeros(nSensors, 1);
             direction = zeros(nSensors, 3);
@@ -33,6 +33,11 @@ classdef SSArray < handle
             for sensorIdx = 1:nSensors
                 [direction(sensorIdx, :), intensity(sensorIdx)] = this.sunsensors(sensorIdx).getSensorReadings(sunDirection, sunEclipse);
             end
+            [~, maxIdx] = max(intensity);
+    
+            % Extracting the direction and intensity of the sensor with the highest intensity
+            maxDirection = direction(maxIdx, :)';
+            maxIntensity = intensity(maxIdx);
         end
     end
 end
