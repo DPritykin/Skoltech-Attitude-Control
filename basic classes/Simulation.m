@@ -187,29 +187,15 @@ classdef Simulation < handle
                 rwAngMomentum0 = zeros(3, 1);
             end
 
-            t = 0;
+            t0 = 0;
             rwCtrl = [0; 0; 0];
             stateEst = [1; 0; 0; 0; 0; 0; 0];
-            simResults = zeros(12, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            simResults = zeros(19, ceil(this.simulationTime / this.sat.controlParams.tLoop));
             startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
 
             for iterIdx = 1:size(simResults, 2)
-
-                %% controlled dynamics
-                simTime = t + this.sat.controlParams.tLoop;
-
-                stateVec = this.integrate([t simTime], ...
-                                          [q0; omega0; rwAngMomentum0], ...
-                                          rwCtrl, ...
-                                          SimulationType.rwControl);
-
-                t = simTime;
-                q0 = stateVec(end, 1:4)' / vecnorm(stateVec(end, 1:4));
-                omega0 = stateVec(end, 5:7)';
-                rwAngMomentum0 = stateVec(end, 8:10)';
-
-                %% state estimation (Extended Kalman filter)
-                t0 = t - this.sat.controlParams.tLoop;
+            %% TRIAD
+                t = t0 + this.sat.controlParams.tLoop;
 
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
@@ -227,18 +213,35 @@ classdef Simulation < handle
 
                 [mtmMeasuredField] = this.calcSensorMagnField(t, q0);
                 [ssMeasuredVector, intSS] = this.calcSSVector(t, q0, startTime, eclipse);
+                
+                initEstimatedX = this.estimateTRIAD(stateEst, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
+
+                %% state estimation (Extended Kalman filter)           
 
                 stateEst = this.ekf.estimate(t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
+
+                %% controlled dynamics
+                simTime = t0 + this.sat.controlParams.tLoop;
+
+                stateVec = this.integrate([t0 simTime], ...
+                                          [q0; omega0; rwAngMomentum0], ...
+                                          rwCtrl, ...
+                                          SimulationType.rwControl);
+
+                t0 = simTime;
+                q0 = stateVec(end, 1:4)' / vecnorm(stateVec(end, 1:4));
+                omega0 = stateVec(end, 5:7)';
+                rwAngMomentum0 = stateVec(end, 8:10)';         
 
                 %% control torque for the next control loop (based on the Kalman estimate of the state)  
                 ez_b = quatRotate(qEst, [0; 0; 1]);
                 trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
                 externalTorqueToCompensate = trqGrav - - crossProduct(omegaEst, (this.sat.J) * omegaEst + rwAngMomentum0);
                 rwCtrl = this.sat.calcRwControl(qEst, omegaEst, rwAngMomentum0, externalTorqueToCompensate);
+                simResults(:, iterIdx) = [t0; q0; omega0; rwAngMomentum0; intSS; qEst; omegaEst];
 
-                simResults(:, iterIdx) = [t; q0; omega0; rwAngMomentum0; intSS];
             end
         end
 
@@ -291,6 +294,28 @@ classdef Simulation < handle
 
         end
 
+        function initEstimatedX = estimateTRIAD(this, stateEst, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_ModelT)
+
+            if ~isempty(this.sat.ss) && ~any(isnan(SS_Vec_Sensor)) 
+                ubody = SS_Vec_Sensor;
+                uref = SS_Vec_ModelT;
+
+                vbodyabs = crossProduct(SS_Vec_Sensor, bSensor);
+                vbody = vbodyabs/vecnorm(vbodyabs);
+                vrefabs = crossProduct(SS_Vec_ModelT, bmodelT);
+                vref = vrefabs/vecnorm(vrefabs);
+
+                wbody = crossProduct(ubody, vbody);
+                wref = crossProduct(uref, vref);
+
+                A_br = [ubody vbody wbody]*[uref vref wref]'; 
+                quatTriad = dcm2quat(A_br);
+
+                initEstimatedX = [quatTriad'; stateEst(5:7)];
+            else 
+                initEstimatedX = stateEst;
+            end 
+        end 
     end
 end
     
