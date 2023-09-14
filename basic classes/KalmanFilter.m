@@ -133,26 +133,32 @@ classdef KalmanFilter < handle
             end 
         end
 
-        function Phi = calcEvolutionMatrix(this,state, bModel, Ctrl)
-
-            if ~isempty(this.sat.mtq)  
-                Fmagn = 2 * skewSymm(Ctrl) * skewSymm(bModel);
-            elseif isempty(this.sat.mtq) 
-                Fmagn = 2 * skewSymm(Ctrl);
-            end 
-
+        function Phi = calcEvolutionMatrix(this, state, bModel, Ctrl)
             q = state(1:4);
             omega = state(5:7);
 
             e3 = quatRotate(q, [0, 0, 1]);
 
+            if ~isempty(this.sat.mtq)  
+
+                Fmagn = 2 * skewSymm(Ctrl) * skewSymm(bModel);
+                Fgyr = skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J;
+
+            elseif isempty(this.sat.mtq) 
+                
+                kAlpha = [this.sat.controlParams.kQ, this.sat.controlParams.kQ, this.sat.controlParams.kQ];
+                ScalarQuat = diag([q(1),q(1),q(1)]);
+
+                Fmagn = 2 * diag(kAlpha) * (ScalarQuat + skewSymm(q(2:4)));
+                Fgyr = -this.sat.controlParams.kW;
+                
+            end 
+       
             Fgrav = 6 * this.orb.meanMotion^2 * (skewSymm(e3)* this.sat.J * skewSymm(e3) - ...
                                                  skewSymm(this.sat.J * e3) * skewSymm(e3));
 
-            Fgyr = skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J;
-
             F1 = [-skewSymm(omega), 0.5 * eye(3)];
-            F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr];
+            F2 = [this.sat.invJ * (Fgrav - Fmagn), this.sat.invJ * Fgyr];
 
             F = [F1; F2];
 

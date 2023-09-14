@@ -213,8 +213,10 @@ classdef Simulation < handle
 
                 [mtmMeasuredField] = this.calcSensorMagnField(t, q0);
                 [ssMeasuredVector, intSS] = this.calcSSVector(t, q0, startTime, eclipse);
-                
-                initEstimatedX = this.estimateTRIAD(stateEst, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
+
+                if t0 == 0
+                    stateEst = this.estimateTRIAD(stateEst, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
+                end 
 
                 %% state estimation (Extended Kalman filter)           
 
@@ -236,10 +238,10 @@ classdef Simulation < handle
                 rwAngMomentum0 = stateVec(end, 8:10)';         
 
                 %% control torque for the next control loop (based on the Kalman estimate of the state)  
-                ez_b = quatRotate(qEst, [0; 0; 1]);
+                ez_b = quatRotate(q0, [0; 0; 1]);
                 trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
-                externalTorqueToCompensate = trqGrav - - crossProduct(omegaEst, (this.sat.J) * omegaEst + rwAngMomentum0);
-                rwCtrl = this.sat.calcRwControl(qEst, omegaEst, rwAngMomentum0, externalTorqueToCompensate);
+                externalTorqueToCompensate = trqGrav - - crossProduct(omega0, (this.sat.J) * omega0 + rwAngMomentum0);
+                rwCtrl = this.sat.calcRwControl(q0, omega0, rwAngMomentum0, externalTorqueToCompensate);
                 simResults(:, iterIdx) = [t0; q0; omega0; rwAngMomentum0; intSS; qEst; omegaEst];
 
             end
