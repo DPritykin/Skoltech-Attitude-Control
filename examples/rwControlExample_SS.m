@@ -76,7 +76,7 @@ ekf = KalmanFilter(sat = sat, ...      % Satellite object
 
 %% simulation settings
 
-simulationTime = 120;
+simulationTime = 100;
 sim = Simulation(simulationTime);
 
 sim.setEnvironment(env);
