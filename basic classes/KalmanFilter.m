@@ -28,7 +28,7 @@ classdef KalmanFilter < handle
             this.initMeasurementsCovariance();
         end
 
-        function estimatedX = estimate(this, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_ModelT)
+        function [estimatedX] = estimate(this, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_ModelT)
 
             [predictedX, predictedP] = this.prediction(t0, x0, bModel0, Ctrl);
 
@@ -38,7 +38,7 @@ classdef KalmanFilter < handle
                 Con = false;
             end 
 
-            estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor, Con);
+            [estimatedX] = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor, Con);
         end
 
         function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, Ctrl)
@@ -77,7 +77,7 @@ classdef KalmanFilter < handle
             predictedP = Phi * this.P * Phi' + this.Q;
         end
 
-        function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor, Con)
+        function [estimatedX] = correction(this, predictedX, predictedP, bModelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor, Con)
             bModelBody = quatRotate(predictedX(1:4), bModelT);
             SS_Vec_ModelT_body = quatRotate(predictedX(1:4),SS_Vec_ModelT);
 
@@ -106,6 +106,7 @@ classdef KalmanFilter < handle
             estimatedX(5:7) = predictedX(5:7) + correctedX(4:6);
 
             this.P = (eye(6) - K * H) * predictedP;
+            ErCov = this.P;
         end
     end
     

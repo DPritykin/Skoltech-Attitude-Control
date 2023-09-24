@@ -124,7 +124,7 @@ classdef Simulation < handle
                 eclipse = this.env.sunEclipse(TransformedT, ePosAbs, t, startTime);
 
                 [mtmMeasuredField] = this.calcSensorMagnField(t, q0);
-                [ssMeasuredVector, intSS] = this.calcSSVector(t, q0, startTime, eclipse);
+                [ssMeasuredVector, intSS, intensity] = this.calcSSVector(t, q0, startTime, eclipse);
 
                 %% state estimation (Extended Kalman filter)
                 t0 = t - this.sat.controlParams.tLoop;
@@ -190,7 +190,7 @@ classdef Simulation < handle
             t0 = 0;
             rwCtrl = [0; 0; 0];
             stateEst = [1; 0; 0; 0; 0; 0; 0];
-            simResults = zeros(19, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            simResults = zeros(15, ceil(this.simulationTime / this.sat.controlParams.tLoop));
             startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
 
             for iterIdx = 1:size(simResults, 2)
@@ -212,7 +212,7 @@ classdef Simulation < handle
                 eclipse = this.env.sunEclipse(TransformedT, ePosAbs, t, startTime);
 
                 [mtmMeasuredField] = this.calcSensorMagnField(t, q0);
-                [ssMeasuredVector, intSS] = this.calcSSVector(t, q0, startTime, eclipse);
+                [ssMeasuredVector, intSS, intensity] = this.calcSSVector(t, q0, startTime, eclipse);
 
                 if t0 == 0
                     stateEst = this.estimateTRIAD(stateEst, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
@@ -220,7 +220,7 @@ classdef Simulation < handle
 
                 %% state estimation (Extended Kalman filter)           
 
-                stateEst = this.ekf.estimate(t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
+                [stateEst] = this.ekf.estimate(t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
 
@@ -238,11 +238,11 @@ classdef Simulation < handle
                 rwAngMomentum0 = stateVec(end, 8:10)';         
 
                 %% control torque for the next control loop (based on the Kalman estimate of the state)  
-                ez_b = quatRotate(q0, [0; 0; 1]);
+                ez_b = quatRotate(qEst, [0; 0; 1]);
                 trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
-                externalTorqueToCompensate = trqGrav - - crossProduct(omega0, (this.sat.J) * omega0 + rwAngMomentum0);
-                rwCtrl = this.sat.calcRwControl(q0, omega0, rwAngMomentum0, externalTorqueToCompensate);
-                simResults(:, iterIdx) = [t0; q0; omega0; rwAngMomentum0; intSS; qEst; omegaEst];
+                externalTorqueToCompensate = trqGrav - - crossProduct(omegaEst, (this.sat.J) * omegaEst + rwAngMomentum0);
+                rwCtrl = this.sat.calcRwControl(qEst, omegaEst, rwAngMomentum0, externalTorqueToCompensate);
+                simResults(:, iterIdx) = [t0; q0; omega0; intSS; intensity];
 
             end
         end
@@ -286,16 +286,19 @@ classdef Simulation < handle
             [sensedMagnField,~] = this.sat.mtm.getSensorReadings(envMagnField);
         end
 
-        function [sensedSunVec, intSS] = calcSSVector(this, t, q, startTime, eclipse)
-
-            TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
-            SunVecICRS = this.env.SunVecCalc(t,startTime);
-            SunVecICRS = SunVecICRS / vecnorm(SunVecICRS);
-            SunVec = TransformedT * SunVecICRS;
-            [sensedSunVec, intSS] = this.sat.ss.getSensorReadingsArray(quatRotate(q, SunVec), eclipse);
-
+        function [sensedSunVec, intSS, intensity] = calcSSVector(this, t, q, startTime, eclipse)
+           if ~isempty(this.sat.ss) 
+               TransformedT = this.orb.eci2orb(this.orb.meanMotion * t);
+                SunVecICRS = this.env.SunVecCalc(t,startTime);
+                SunVecICRS = SunVecICRS / vecnorm(SunVecICRS);
+                SunVec = TransformedT * SunVecICRS;
+                [sensedSunVec, intSS, intensity] = this.sat.ss.getSensorReadingsArray(quatRotate(q, SunVec), eclipse);
+           else
+                sensedSunVec =[0;0;0];
+                intSS = 0;
+           end
         end
-
+        
         function initEstimatedX = estimateTRIAD(this, stateEst, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_ModelT)
 
             if ~isempty(this.sat.ss) && ~any(isnan(SS_Vec_Sensor)) 
