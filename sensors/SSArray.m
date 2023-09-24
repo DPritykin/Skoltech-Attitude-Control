@@ -25,7 +25,7 @@ classdef SSArray < handle
                 this.sunsensors = SSArray;
         end
 
-        function [maxDirection, maxIntensity] = getSensorReadingsArray(this, sunDirection, sunEclipse)
+        function [maxDirection, maxIntensity, intensity] = getSensorReadingsArray(this, sunDirection, sunEclipse)
             nSensors = numel(this.sunsensors);
             intensity = zeros(nSensors, 1);
             direction = zeros(nSensors, 3);
