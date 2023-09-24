@@ -49,10 +49,11 @@ ss = SunSensor(bias = [0; 0; 0;], ...               % [rad] sun sensor bias
 sunSensorArray = SSArray(baselineSS = ss, ...           % a Sun Sensor object
                          dcm = [eye(3); 
                                 0 0 1; 0 1 0; -1 0 0;
-                                1 0 0; 0 0 -1; 0 1 0;
+                                -1 0 0; 0 0 1; 0 1 0;
                                 0 0 -1; -1 0 0; 0 1 0;
-                                0 1 0; 0 0 -1; -1 0 0;], ...
-                         sensorCount = 5);
+                                0 1 0; 0 0 -1; -1 0 0; ...
+                                -1 0 0; 0 1 0; 0 0 -1], ...
+                         sensorCount = 6);
 
 sat.setSSArray(sunSensorArray);
 
@@ -76,7 +77,7 @@ ekf = KalmanFilter(sat = sat, ...      % Satellite object
 
 %% simulation settings
 
-simulationTime = 100;
+simulationTime = 90;
 sim = Simulation(simulationTime);
 
 sim.setEnvironment(env);
@@ -180,8 +181,9 @@ function plotResults(simData, meanMotion)
     legend('q0','q1','q2','q3');
 
     subplot(2, 3, 6) % Sun Sensor Intensity
-    plot(timeInSeconds, simData(12, 1:end), 'LineWidth', 1)
+    plot(timeInSeconds, simData(9, 1:end), 'LineWidth', 1)
     grid on
     xlabel('Time in seconds')
     ylabel('Sun Sensor Intensity')
+
 end
