@@ -51,9 +51,8 @@ sunSensorArray = SSArray(baselineSS = ss, ...           % a Sun Sensor object
                                 0 0 1; 0 1 0; -1 0 0;
                                 -1 0 0; 0 0 1; 0 1 0;
                                 0 0 -1; -1 0 0; 0 1 0;
-                                0 1 0; 0 0 -1; -1 0 0; ...
-                                -1 0 0; 0 1 0; 0 0 -1], ...
-                         sensorCount = 6);
+                                0 1 0; 0 0 -1; -1 0 0], ...
+                         sensorCount = 5);
 
 sat.setSSArray(sunSensorArray);
 
