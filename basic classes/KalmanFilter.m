@@ -106,7 +106,6 @@ classdef KalmanFilter < handle
             estimatedX(5:7) = predictedX(5:7) + correctedX(4:6);
 
             this.P = (eye(6) - K * H) * predictedP;
-            ErCov = this.P;
         end
     end
     
@@ -149,17 +148,19 @@ classdef KalmanFilter < handle
                 
                 kAlpha = [this.sat.controlParams.kQ, this.sat.controlParams.kQ, this.sat.controlParams.kQ];
                 ScalarQuat = diag([q(1),q(1),q(1)]);
+                kOmega = [this.sat.controlParams.kW, this.sat.controlParams.kW, this.sat.controlParams.kW];
 
-                Fmagn = 2 * diag(kAlpha) * (ScalarQuat + skewSymm(q(2:4)));
-                Fgyr = -this.sat.controlParams.kW;
-                
+%               Fmagn = diag(kAlpha) * (ScalarQuat + skewSymm(q(2:4)));
+                Fmagn = this.sat.controlParams.kQ*eye(3);
+%               Fgyr = -diag(kOmega);
+                Fgyr = -this.sat.controlParams.kW*eye(3);
             end 
        
             Fgrav = 6 * this.orb.meanMotion^2 * (skewSymm(e3)* this.sat.J * skewSymm(e3) - ...
                                                  skewSymm(this.sat.J * e3) * skewSymm(e3));
 
             F1 = [-skewSymm(omega), 0.5 * eye(3)];
-            F2 = [this.sat.invJ * (Fgrav - Fmagn), this.sat.invJ * Fgyr];
+            F2 = [this.sat.invJ * (Fgrav) - Fmagn, Fgyr];
 
             F = [F1; F2];
 
@@ -178,7 +179,7 @@ classdef KalmanFilter < handle
         function K = calcKalmanGain(this, P, H, bModelNorm, SunModelNorm, SS_Vec_Sensor, Con)
 
             if Con == true
-                S = H * P * H' + [this.R(1:3, :) / bModelNorm^2; this.R(4:6, :) / SunModelNorm^2];
+                S = H * P * H' + [this.R(1:3, :) / bModelNorm^2; this.R(4:6, :) / SunModelNorm^2];               
             else
                 S = H * P * H' + this.R(1:3, 1:3) / bModelNorm^2;
             end 
