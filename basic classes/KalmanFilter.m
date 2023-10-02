@@ -99,7 +99,7 @@ classdef KalmanFilter < handle
             q = state(1:4);
             omega = state(5:7);
 
-            e3 = quatRotate(q, [0, 0, 1]);
+            e3 = quatRotate(q, [0; 0; 1]);
 
             Fgrav = 6 * this.orb.meanMotion^2 * (skewSymm(e3)* this.sat.J * skewSymm(e3) - ...
                                                  skewSymm(this.sat.J * e3) * skewSymm(e3));
