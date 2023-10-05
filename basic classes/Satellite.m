@@ -118,7 +118,7 @@ classdef Satellite < handle
             m = m / maxRatio;
         end
 
-        function trq = calcRwControl(this, q, omega, rwAngMomentum, externalTorqueToCompensate)
+        function [disp,trq] = calcRwControl(this, q, omega, rwAngMomentum, externalTorqueToCompensate)
             quatErr = quatProduct(this.controlParams.qReqCnj, q);
             omegaErr = omega - this.controlParams.omegaReq;
 
@@ -126,7 +126,7 @@ classdef Satellite < handle
                            -this.controlParams.kW * this.J * omegaErr ...
                            -this.controlParams.kQ * this.J * quatErr(2:4);
 
-            trq = this.rw.actuateCommand(trqToActuate, this.controlParams.tLoop, rwAngMomentum);
+            [disp,trq] = this.rw.actuateCommand(trqToActuate, this.controlParams.tLoop, rwAngMomentum);
         end
     end
 end

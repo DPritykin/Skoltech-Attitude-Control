@@ -6,8 +6,8 @@ classdef Environment < handle
         mu0 = 1.257e-6;          % [N / A^2] vacuum permeability
         muE = 7.94e+22;          % [A * m^2] magnetic dipole moment of the Earth
         earthRadius = 6371e+3;   % [m] radius of the Earth
-        sunRadius = 696e+6       % [m] radius of the Sun
-        AU = 149.598e+9          % [m] Astronomical Unit 
+        sunRadius = 696e+6;      % [m] radius of the Sun
+        AU = 149.598e+9;         % [m] Astronomical Unit 
         km2m = 1e3;
 
         distTorqueSigma = 0;     % [N * m] disturbance of the torque

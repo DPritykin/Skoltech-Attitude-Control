@@ -137,30 +137,26 @@ classdef KalmanFilter < handle
             q = state(1:4);
             omega = state(5:7);
 
-            e3 = quatRotate(q, [0, 0, 1]);
+            e3 = quatRotate(q, [0; 0; 1]);
 
             if ~isempty(this.sat.mtq)  
 
-                Fmagn = 2 * skewSymm(Ctrl) * skewSymm(bModel);
+                Fmagn = this.sat.invJ * (2 * skewSymm(Ctrl) * skewSymm(bModel));
+                Fgrav = 6 * this.orb.meanMotion^2 * (skewSymm(e3)* this.sat.J * skewSymm(e3) - ...
+                                                 skewSymm(this.sat.J * e3) * skewSymm(e3));
                 Fgyr = skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J;
+                F2 = [this.sat.invJ * (Fgrav + Fmagn), this.sat.invJ * Fgyr];
 
             elseif isempty(this.sat.mtq) 
-                
-                kAlpha = [this.sat.controlParams.kQ, this.sat.controlParams.kQ, this.sat.controlParams.kQ];
-                ScalarQuat = diag([q(1),q(1),q(1)]);
-                kOmega = [this.sat.controlParams.kW, this.sat.controlParams.kW, this.sat.controlParams.kW];
 
-%               Fmagn = diag(kAlpha) * (ScalarQuat + skewSymm(q(2:4)));
-                Fmagn = this.sat.controlParams.kQ*eye(3);
-%               Fgyr = -diag(kOmega);
-                Fgyr = -this.sat.controlParams.kW*eye(3);
+                Fctrl = this.sat.controlParams.kQ*eye(3);
+                Fomega =  this.sat.controlParams.kW*eye(3);
+%               Fomega = -this.sat.invJ * (skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J);
+                F2 = [ -Fctrl,  -Fomega];
+
             end 
        
-            Fgrav = 6 * this.orb.meanMotion^2 * (skewSymm(e3)* this.sat.J * skewSymm(e3) - ...
-                                                 skewSymm(this.sat.J * e3) * skewSymm(e3));
-
             F1 = [-skewSymm(omega), 0.5 * eye(3)];
-            F2 = [this.sat.invJ * (Fgrav) - Fmagn, Fgyr];
 
             F = [F1; F2];
 

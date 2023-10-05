@@ -190,7 +190,7 @@ classdef Simulation < handle
             t0 = 0;
             rwCtrl = [0; 0; 0];
             stateEst = [1; 0; 0; 0; 0; 0; 0];
-            simResults = zeros(9, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            simResults = zeros(18, ceil(this.simulationTime / this.sat.controlParams.tLoop));
             startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
 
             for iterIdx = 1:size(simResults, 2)
@@ -240,9 +240,10 @@ classdef Simulation < handle
                 %% control torque for the next control loop (based on the Kalman estimate of the state)  
                 ez_b = quatRotate(qEst, [0; 0; 1]);
                 trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
-                externalTorqueToCompensate = trqGrav -- crossProduct(omegaEst, (this.sat.J) * omegaEst + rwAngMomentum0);
-                rwCtrl = this.sat.calcRwControl(qEst, omegaEst, rwAngMomentum0, externalTorqueToCompensate);
-                simResults(:, iterIdx) = [t0; q0; omega0; intSS];
+                externalTorqueToCompensate = trqGrav - crossProduct(omegaEst, (this.sat.J) * omegaEst + rwAngMomentum0);
+                [disp,rwCtrl] = this.sat.calcRwControl(qEst, omegaEst, rwAngMomentum0, externalTorqueToCompensate);
+                simResults(:, iterIdx) = [t0; q0; omega0; intSS; disp];
+
 
             end
         end
