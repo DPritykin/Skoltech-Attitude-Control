@@ -1,7 +1,7 @@
 classdef RwArray < handle
 
     properties(SetAccess = protected, GetAccess = public)
-        reactionwheels           % array of reaction wheels(X, Y , and Z unless set up otherwise)
+        reactionwheels           % array of reaction wheels(X, Y, and Z unless set up otherwise)
     end
 
     methods
@@ -27,7 +27,7 @@ classdef RwArray < handle
             end
         end
 
-        function actuatedTorque = actuateCommand(this, commandTorque, duration, rwAngMomentum)
+        function [disp,actuatedTorque] = actuateCommand(this, commandTorque, duration, rwAngMomentum)
             actuatedTorque = zeros(3, 1);
 
             for rwIdx = 1:size(this.reactionwheels, 2)
@@ -35,6 +35,17 @@ classdef RwArray < handle
                                  this.reactionwheels(rwIdx).actuateControlTorque(commandTorque(rwIdx), ...
                                                                                  duration, ...
                                                                                  rwAngMomentum(rwIdx));
+              disp1 =  this.reactionwheels(1).actuateControlTorque(commandTorque(1), ...
+                                                                                 duration, ...
+                                                                                 rwAngMomentum(1));
+                            disp2 =  this.reactionwheels(2).actuateControlTorque(commandTorque(2), ...
+                                                                                 duration, ...
+                                                                                 rwAngMomentum(2));
+                                          disp3 =  this.reactionwheels(3).actuateControlTorque(commandTorque(3), ...
+                                                                                 duration, ...
+                                                                                 rwAngMomentum(3));
+                                          disp = [disp1; disp2; disp3];
+
             end
         end
     end
