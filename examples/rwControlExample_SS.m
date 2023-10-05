@@ -142,25 +142,25 @@ function plotResults(simData, meanMotion)
     legend(legend_p, legend_r, legend_y);
     
     subplot(2, 3, 2) % angular velocity
-    plot(timeInSeconds, simData(6, 1:end), 'Color', red, 'LineWidth', 2)
+    plot(timeInSeconds, 57.2958*simData(6, 1:end), 'Color', red, 'LineWidth', 2)
     hold on
-    plot(timeInSeconds, simData(7, 1:end), 'Color', green, 'LineWidth', 2)
+    plot(timeInSeconds, 57.2958*simData(7, 1:end), 'Color', green, 'LineWidth', 2)
     hold on
-    plot(timeInSeconds, simData(8, 1:end), 'Color', blue, 'LineWidth', 2)
+    plot(timeInSeconds, 57.2958*simData(8, 1:end), 'Color', blue, 'LineWidth', 2)
     grid on
     xlabel('Time in seconds')
-    ylabel('Angular Velocity Components, [rad/sec]')
+    ylabel('Angular Velocity Components, [deg/sec]')
     legend('\omega_1','\omega_2','\omega_3');
     
     subplot(2, 3, 5) % angular velocity
-    plot(timeInSeconds(startIndex:end), simData(6, startIndex:end), 'Color', red, 'LineWidth', 2)
+    plot(timeInSeconds(startIndex:end), 57.2958*simData(6, startIndex:end), 'Color', red, 'LineWidth', 2)
     hold on
-    plot(timeInSeconds(startIndex:end), (simData(7, startIndex:end) - meanMotion), 'Color', green, 'LineWidth', 2)
+    plot(timeInSeconds(startIndex:end), 57.2958*(simData(7, startIndex:end) - meanMotion), 'Color', green, 'LineWidth', 2)
     hold on
-    plot(timeInSeconds(startIndex:end), simData(8, startIndex:end), 'Color', blue, 'LineWidth', 2)
+    plot(timeInSeconds(startIndex:end), 57.2958*simData(8, startIndex:end), 'Color', blue, 'LineWidth', 2)
     grid on
     xlabel('Time in seconds')
-    ylabel('Angular Velocity Errors, [rad/sec]')
+    ylabel('Angular Velocity Errors, [deg/sec]')
     legend_1 = ['RMSE_{\omega_1} = ', num2str(rmseW1, '%10.2e\n')];
     legend_2 = ['RMSE_{omega_2} = ', num2str(rmseW2, '%10.2e\n')];
     legend_3 = ['RMSE_{\omega_3} = ', num2str(rmseW3, '%10.2e\n')];
