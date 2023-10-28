@@ -28,9 +28,9 @@ classdef KalmanFilter < handle
             this.initMeasurementsCovariance();
         end
 
-        function [estimatedX] = estimate(this, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_ModelT)
+        function [estimatedX, predictedX, Phi] = estimate(this, t0, x0, Ctrl, bModel0, bmodelT, bSensor, SS_Vec_Sensor, SS_Vec_ModelT)
 
-            [predictedX, predictedP] = this.prediction(t0, x0, bModel0, Ctrl);
+            [predictedX, predictedP, Phi] = this.prediction(t0, x0, bModel0, Ctrl);
 
             if ~isempty(this.sat.ss) && ~any(isnan(SS_Vec_Sensor)) 
                 Con = true;
@@ -41,7 +41,7 @@ classdef KalmanFilter < handle
             [estimatedX] = this.correction(predictedX, predictedP, bmodelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor, Con);
         end
 
-        function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, Ctrl)
+        function [predictedX, predictedP, Phi] = prediction(this, t0, x0, bModel0, Ctrl)
             bModel = quatRotate(x0(1:4), bModel0);
 
             if ~isempty(this.sat.mtq)  
@@ -75,6 +75,7 @@ classdef KalmanFilter < handle
 
             Phi = this.calcEvolutionMatrix(x0, bModel, Ctrl);
             predictedP = Phi * this.P * Phi' + this.Q;
+
         end
 
         function [estimatedX] = correction(this, predictedX, predictedP, bModelT, bSensor, SS_Vec_ModelT, SS_Vec_Sensor, Con)
@@ -106,6 +107,7 @@ classdef KalmanFilter < handle
             estimatedX(5:7) = predictedX(5:7) + correctedX(4:6);
 
             this.P = (eye(6) - K * H) * predictedP;
+            
         end
     end
     
@@ -121,6 +123,7 @@ classdef KalmanFilter < handle
             D = eye(3) * distTorqueSigma^2;
 
             this.Q = G * D * G' * this.sat.controlParams.tLoop;
+            this.Q = eye(6);
         end
 
         function initMeasurementsCovariance(this)
@@ -149,11 +152,11 @@ classdef KalmanFilter < handle
 
             elseif isempty(this.sat.mtq) 
 
-                Fctrl = this.sat.controlParams.kQ*eye(3);
-                Fomega =  this.sat.controlParams.kW*eye(3);
-%               Fomega = -this.sat.invJ * (skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J);
-                F2 = [ -Fctrl,  -Fomega];
-
+                Fquat  = this.sat.controlParams.kQ*eye(3);
+                Fomega = this.sat.controlParams.kW*eye(3);
+%                 Fgyr = this.sat.invJ *  (skewSymm(this.sat.J * omega) - skewSymm(omega) * this.sat.J);
+                F2 = [ -Fquat,  -Fomega];
+ 
             end 
        
             F1 = [-skewSymm(omega), 0.5 * eye(3)];
@@ -161,6 +164,7 @@ classdef KalmanFilter < handle
             F = [F1; F2];
 
             Phi =  eye(6) + F * this.sat.controlParams.tLoop;
+          
         end
 
         function H = calcObservationMatrix(this, bModel, Sun_Model, SS_Vec_Sensor, Con)

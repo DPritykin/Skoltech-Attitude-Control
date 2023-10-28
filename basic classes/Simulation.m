@@ -190,7 +190,7 @@ classdef Simulation < handle
             t0 = 0;
             rwCtrl = [0; 0; 0];
             stateEst = [1; 0; 0; 0; 0; 0; 0];
-            simResults = zeros(18, ceil(this.simulationTime / this.sat.controlParams.tLoop));
+            simResults = zeros(68, ceil(this.simulationTime / this.sat.controlParams.tLoop));
             startTime = datetime('2021-03-14 01:00:00', 'TimeZone', 'UTC');
 
             for iterIdx = 1:size(simResults, 2)
@@ -220,7 +220,7 @@ classdef Simulation < handle
 
                 %% state estimation (Extended Kalman filter)           
 
-                [stateEst] = this.ekf.estimate(t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
+                [stateEst, predictedX, Phi] = this.ekf.estimate(t0, stateEst, rwCtrl, bModel0, bmodelT, mtmMeasuredField, ssMeasuredVector, SS_Vec_ModelT);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
 
@@ -241,10 +241,10 @@ classdef Simulation < handle
                 ez_b = quatRotate(qEst, [0; 0; 1]);
                 trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
                 externalTorqueToCompensate = trqGrav - crossProduct(omegaEst, (this.sat.J) * omegaEst + rwAngMomentum0);
-                [disp,rwCtrl] = this.sat.calcRwControl(qEst, omegaEst, rwAngMomentum0, externalTorqueToCompensate);
-                simResults(:, iterIdx) = [t0; q0; omega0; intSS; disp];
-
-
+                gyr = crossProduct(omegaEst, (this.sat.J) * omegaEst + rwAngMomentum0);
+                rwCtrl = this.sat.calcRwControl(qEst, omegaEst, rwAngMomentum0, externalTorqueToCompensate);
+                simResults(:, iterIdx) = [t0; q0; omega0; intSS; qEst; omegaEst; predictedX; Phi(1:6,1); Phi(1:6,2); Phi(1:6,3); Phi(1:6,4); Phi(1:6,5); Phi(1:6,6); rwCtrl; externalTorqueToCompensate; gyr ];
+                iterIdx
             end
         end
 
