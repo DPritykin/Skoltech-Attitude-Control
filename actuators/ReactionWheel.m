@@ -13,7 +13,7 @@ classdef ReactionWheel < AbstractActuator
                 parameters.axis {mustBeNumeric} = [0; 0; 1];
                 parameters.dcm {mustBeNumeric} = eye(3);
                 parameters.noiseSigma {mustBeNumeric} = 1e-10;
-                parameters.maxTorque {mustBeNumeric} = 1e-3;
+                parameters.maxTorque {mustBeNumeric} = 0.97e-3;
                 parameters.maxAngMomentum {mustBeNumeric} = 1e-2;
             end
 

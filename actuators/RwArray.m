@@ -8,8 +8,8 @@ classdef RwArray < handle
         function this = RwArray(parameters)
             arguments
                 parameters.baselineRw ReactionWheel
-                parameters.rwCount {mustBeNumericOrLogical} = 3;
-                parameters.doStandardXyzArray {mustBeNumericOrLogical} = true;
+                parameters.rwCount {mustBeNumericOrLogical} = 4;
+                parameters.doStandardXyzArray {mustBeNumericOrLogical} = false;
             end
 
             rwArray(1, parameters.rwCount) = ReactionWheel();
@@ -22,37 +22,74 @@ classdef RwArray < handle
 
             if parameters.doStandardXyzArray
                 for rwAxisBf = ['X', 'Y', 'Z']
-                    this.updateReactionWheel(rwAxisBf)
+                    this.updateReactionWheelStandard(rwAxisBf)
+                end
+            else
+                for rwAxisBf = ['A', 'B', 'C', 'D']
+                    this.updateReactionWheelPyramid(rwAxisBf)
                 end
             end
         end
 
-        function [disp,actuatedTorque] = actuateCommand(this, commandTorque, duration, rwAngMomentum)
+
+        function actuatedTorque = actuateCommand(this, commandTorque, duration, rwAngMomentum)
+            
+            WheelToBody = (1/sqrt(3))*[1 -1 -1 1; 1  1 -1 -1; 1 1 1 1]; 
+            BodyToWheel = (sqrt(3)/4)*[1 1 1; -1 1 1; -1 -1 1; 1 -1 1];
+
             actuatedTorque = zeros(3, 1);
+            
+            if length(this.reactionwheels) == 4
+                commandTorqueWheel = BodyToWheel * commandTorque;
+                rwAngMomentumWheel = BodyToWheel * rwAngMomentum;
+            else 
+                commandTorqueWheel = commandTorque;
+                rwAngMomentumWheel = rwAngMomentum;
+            end 
 
-            for rwIdx = 1:size(this.reactionwheels, 2)
+            for rwIdx = 1:size(this.reactionwheels, 2)  % Iterate through the reaction wheels
                 actuatedTorque = actuatedTorque + ...
-                                 this.reactionwheels(rwIdx).actuateControlTorque(commandTorque(rwIdx), ...
-                                                                                 duration, ...
-                                                                                 rwAngMomentum(rwIdx));
-              disp1 =  this.reactionwheels(1).actuateControlTorque(commandTorque(1), ...
-                                                                                 duration, ...
-                                                                                 rwAngMomentum(1));
-                            disp2 =  this.reactionwheels(2).actuateControlTorque(commandTorque(2), ...
-                                                                                 duration, ...
-                                                                                 rwAngMomentum(2));
-                                          disp3 =  this.reactionwheels(3).actuateControlTorque(commandTorque(3), ...
-                                                                                 duration, ...
-                                                                                 rwAngMomentum(3));
-                                          disp = [disp1; disp2; disp3];
-
+                    this.reactionwheels(rwIdx).actuateControlTorque(commandTorqueWheel(rwIdx), duration, rwAngMomentumWheel(rwIdx));
             end
         end
+
     end
 
     methods(Access = private)
 
-        function updateReactionWheel(this, rwAxisBf)
+        function updateReactionWheelPyramid(this, rwAxisBf)
+            switch rwAxisBf
+                case 'A'
+                    rwIdx = 1;
+                    rwName = 'rwA';
+                    rwDcm = eye(3);
+
+                case 'B'
+                    rwIdx = 2;
+                    rwName = 'rwB';
+                    rwDcm = [cos(2*pi/3), -sin(2*pi/3), 0;
+                             sin(2*pi/3), cos(2*pi/3), 0;
+                             0, 0, 1];
+                  case 'C'  
+                    rwIdx = 3;
+                    rwName = 'rwC';
+                    rwDcm = [cos(4*pi/3), -sin(4*pi/3), 0;
+                             sin(4*pi/3), cos(4*pi/3), 0;
+                             0, 0, 1];
+
+                case 'D'
+                    rwIdx = 4;
+                    rwName = 'rwD';
+                    rwDcm = [cos(pi), -sin(pi), 0;
+                               sin(pi), cos(pi), 0;
+                               0, 0, 1];
+            end
+
+            this.reactionwheels(rwIdx).setName(rwName);
+            this.reactionwheels(rwIdx).setDcm(rwDcm);
+        end
+
+        function updateReactionWheelStandard(this, rwAxisBf)
             switch rwAxisBf
                 case 'X'
                     rwIdx = 1;
