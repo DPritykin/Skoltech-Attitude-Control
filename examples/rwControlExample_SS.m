@@ -9,7 +9,7 @@ clear
 
 %% environment settings 
 
-env = Environment(distTorqueSigma = 0, ...  % [N * m] disturbance of the torque
+env = Environment(distTorqueSigma = 3e-9, ...  % [N * m] disturbance of the torque
                   magnFieldSigma = 2e-7);      % [T] noise to create actual magnetic field
 
 %% orbit settings
