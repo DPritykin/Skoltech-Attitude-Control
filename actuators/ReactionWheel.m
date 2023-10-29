@@ -3,6 +3,8 @@ classdef ReactionWheel < AbstractActuator
     properties
         maxTorque       % [Nm], maximum torque the reaction wheel can produce
         maxAngMomentum  % [Nms], maximum angular momentum the reaction wheel is allowed to attain
+
+        angularMomentum = 0
     end
 
     methods
@@ -39,16 +41,17 @@ classdef ReactionWheel < AbstractActuator
 
         % simulates the control torque output along the output axis
         % given the required torque and the current angular momentum of RW
-        function outputTorque = actuateControlTorque(this, requiredTorque, duration, currentAngularMomentum)
+        function outputTorque = actuateControlTorque(this, requiredTorque, duration)
             if abs(requiredTorque) > this.maxTorque
                 requiredTorque = sign(requiredTorque) * this.maxTorque;
             end
 
-            if abs(currentAngularMomentum + requiredTorque * duration) > this.maxAngMomentum
+            if abs(this.angularMomentum + requiredTorque * duration) > this.maxAngMomentum
                 requiredTorque = 0;
             end
 
             outputTorque = this.actuateRequiredAction(requiredTorque);
+            this.angularMomentum = this.angularMomentum + sign(requiredTorque) * vecnorm(outputTorque) * duration;            
         end
     end
 end

@@ -1,7 +1,7 @@
 % An example of a satellite (3U CubeSat) in a circular orbit
 % required attitude - orbital
 % adcs sensor - magnetometer
-% adcs actuators - 3 magnetorquers
+% adcs actuators - 3 othogonal magnetorquers
 % adcs state determination - Extended Kalman Filter
 
 clc
@@ -9,8 +9,8 @@ clear
 
 %% environment settings 
 
-env = Environment(distTorqueSigma = 3e-9, ...  % [N * m] disturbance of the torque
-                  magnFieldSigma = 2e-7);      % [T] noise to create actual magnetic field
+env = Environment(distTorqueSigma = 3e-9, ...  % [N * m] disturbance torque
+                  magnFieldSigma = 2e-7);      % [T] noise to model "actual"/envirnomnetal geomagnetic field
 
 %% orbit settings
 
@@ -42,7 +42,7 @@ mtq = Magnetorquer(area = 0.05^2, ...             % [m^2] area of a coil
                    resistance = 25);              % [Ohm] wire resistance
 
 % setting up an array of 3 identical magnetorquers onboard of the sat
-standardMtqArray = MtqArray(baselineMtq = mtq, ...      % a Magnrtorquer object
+standardMtqArray = MtqArray(baselineMtq = mtq, ...      % a Magnetorquer object
                             maxInputVoltage = 5, ...    % [V] maximum innput voltage available in EPS
                             doStandardXyzArray = true); % 3 mtqs along the X, y, and Z axes of the satellite body-frame
 
@@ -50,11 +50,11 @@ sat.setMtqArray(standardMtqArray);
 
 %% EKF settings
 
-ekf = KalmanFilter(sat = sat, ...      % Satellite object
-                   orb = orb, ...      % CircularOrbit object 
-                   env = env, ...      % Environment object
-                   sigmaQ0 = 1, ...    % variance to initialize the error covariance matrix (quaternion part)
-                   sigmaOmega0 = 0.1); % variance to initialize the error covariance matrix (omega part)
+ekf = MagneticKalmanFilter(sat = sat, ...      % Satellite object
+                           orb = orb, ...      % CircularOrbit object 
+                           env = env, ...      % Environment object
+                           sigmaQ0 = 1, ...    % variance to initialize the error covariance matrix (quaternion part)
+                           sigmaOmega0 = 0.1); % variance to initialize the error covariance matrix (omega part)
 
 %% simulation settings
 

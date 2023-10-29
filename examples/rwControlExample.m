@@ -33,8 +33,9 @@ rw = ReactionWheel(maxTorque = 1e-3, ...        % [Nm] max torque RW can produce
                    maxAngMomentum = 1e-2);      % [Nms] max angular momentum RW can have
 
 % setting up an array of 3 identical RWs onboard of the sat
-standardRwArray = RwArray(baselineRw = rw, ...         % a ReactionWheel object
-                          doStandardXyzArray = true);  % 3 RWs along the X, y, and Z axes of the satellite body-frame
+rwSetup = RwArrayConfiguration.regularTetrahedron;
+standardRwArray = RwArray(baselineRw = rw, ...        % a ReactionWheel object
+                          rwConfiguration = rwSetup); % 3 RWs along the X, y, and Z axes of the satellite body-frame
 
 sat.setRwArray(standardRwArray);
 

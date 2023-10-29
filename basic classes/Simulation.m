@@ -52,7 +52,7 @@ classdef Simulation < handle
 
         % adds EKF to simulation
         function setFilter(this, ekf)
-            if isa(ekf, 'KalmanFilter')
+            if isa(ekf, 'AbstractKalmanFilter')
                 this.ekf = ekf;
             else
                 error('Simulation:InvalidFilter', 'Invalid EKF object!')
@@ -86,7 +86,7 @@ classdef Simulation < handle
 
     methods(Access = protected)
 
-        function simResults = simulateThreeAxialControl(this, q0, omega0)
+        function simResults = simulateThreeAxialControl(this, qDyn, omegaDyn)
             t = 0;
             mCtrl = [0; 0; 0];
             stateEst = [1; 0; 0; 0; 0; 0; 0;];
@@ -97,28 +97,28 @@ classdef Simulation < handle
                 %% controlled dynamics (magnetorquers on)
                 simTime = t + this.sat.controlParams.tCtrl;
 
-                stateVec = this.integrate([t simTime], [q0; omega0], mCtrl, SimulationType.fullMagneticControl);
+                stateVec = this.integrate([t simTime], [qDyn; omegaDyn], mCtrl, SimulationType.fullMagneticControl);
 
                 t = simTime;
-                q0 = stateVec(end, 1:4)' / vecnorm(stateVec(end, 1:4));
-                omega0 = stateVec(end, 5:7)';
+                qDyn = stateVec(end, 1:4)' / vecnorm(stateVec(end, 1:4));
+                omegaDyn = stateVec(end, 5:7)';
 
                 %% measurements (magnetorquers off)
                 simTime = t + this.sat.controlParams.tMeas;
 
-                stateVec = this.integrate([t simTime], [q0; omega0]);
+                stateVec = this.integrate([t simTime], [qDyn; omegaDyn]);
 
                 t = simTime;
-                q0 = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
-                omega0 = stateVec(end, 5:7)';
-                mtmMeasuredField = this.calcSensorMagnField(t, q0);
+                qDyn = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
+                omegaDyn = stateVec(end, 5:7)';
+                mtmMeasuredField = this.calcSensorMagnField(t, qDyn);
 
                 %% state estimation (Extended Kalman filter)
                 t0 = t - this.sat.controlParams.tLoop;
                 bModel0 = this.env.directDipoleOrbital(this.orb.meanMotion * t0, this.orb.inclination, this.orb.orbitRadius);
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
 
-                stateEst = this.ekf.estimate(t0, stateEst, mCtrl, bModel0, bmodelT, mtmMeasuredField);
+                stateEst = this.ekf.estimate(t0, stateEst, bModel0, bmodelT, mtmMeasuredField, mCtrl);
                 qEst = stateEst(1:4);
                 omegaEst = stateEst(5:7);
 
@@ -126,11 +126,11 @@ classdef Simulation < handle
                 omegaRel = omegaEst - quatRotate(qEst, [0; this.orb.meanMotion; 0]);
                 mCtrl = this.sat.calcControlMagneticMoment(qEst, omegaRel, mtmMeasuredField);
 
-                simResults(:, iterIdx) = [t; q0; omega0];
+                simResults(:, iterIdx) = [t; qDyn; omegaDyn];
             end
         end
 
-        function simResults = simulateBdotControl(this, q0, omega0)
+        function simResults = simulateBdotControl(this, qDyn, omegaDyn)
             t = 0;
             mCtrl = [0; 0; 0];
             simResults = zeros(8, ceil(this.simulationTime / this.sat.controlParams.tLoop));
@@ -142,34 +142,34 @@ classdef Simulation < handle
                 % TODO: need to make sure the control period is not enough to
                 % start accelerating the sat
 
-                stateVec = this.integrate([t simTime], [q0; omega0], mCtrl, SimulationType.bDotControl);
+                stateVec = this.integrate([t simTime], [qDyn; omegaDyn], mCtrl, SimulationType.bDotControl);
 
                 t = simTime;
-                q0 = stateVec(end, 1:4)' / vecnorm(stateVec(end, 1:4));
-                omega0 = stateVec(end, 5:7)';
+                qDyn = stateVec(end, 1:4)' / vecnorm(stateVec(end, 1:4));
+                omegaDyn = stateVec(end, 5:7)';
 
                 %% measurements (magnetorquers off)
                 simTime = t + this.sat.controlParams.tMeas;
 
-                stateVec = this.integrate([t simTime], [q0; omega0]);
+                stateVec = this.integrate([t simTime], [qDyn; omegaDyn]);
 
                 t = simTime;
-                q0 = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
-                omega0 = stateVec(end, 5:7)';
+                qDyn = stateVec(end, 1:4)' / norm(stateVec(end, 1:4));
+                omegaDyn = stateVec(end, 5:7)';
 
                 %% measurements
                 bmodelT = this.env.directDipoleOrbital(this.orb.meanMotion * t, this.orb.inclination, this.orb.orbitRadius);
-                bSensor = this.sat.mtm.getSensorReadings(quatRotate(q0, bmodelT));
-                omegaSensor = this.sat.gyro.getSensorReadings(omega0);
+                bSensor = this.sat.mtm.getSensorReadings(quatRotate(qDyn, bmodelT));
+                omegaSensor = this.sat.gyro.getSensorReadings(omegaDyn);
 
                 %% control moment for the next control loop (based on the measurements)                
                 mCtrl = this.sat.calcBdotMagneticMoment(bSensor, omegaSensor);
 
-                simResults(:, iterIdx) = [t; q0; omega0];
+                simResults(:, iterIdx) = [t; qDyn; omegaDyn];
             end
         end
 
-        function simResults = simulateRwControl(this, q0, omega0, rwAngMomentum0)
+        function simResults = simulateRwControl(this, qDyn, omegaDyn, rwAngMomentum0)
 
             if ~exist('rwAngMomentum0', 'var')
                 rwAngMomentum0 = zeros(3, 1);
@@ -185,22 +185,22 @@ classdef Simulation < handle
                 simTime = t + this.sat.controlParams.tLoop;
 
                 stateVec = this.integrate([t simTime], ...
-                                          [q0; omega0; rwAngMomentum0], ...
+                                          [qDyn; omegaDyn; rwAngMomentum0], ...
                                           rwCtrl, ...
                                           SimulationType.rwControl);
 
                 t = simTime;
-                q0 = stateVec(end, 1:4)' / vecnorm(stateVec(end, 1:4));
-                omega0 = stateVec(end, 5:7)';
+                qDyn = stateVec(end, 1:4)' / vecnorm(stateVec(end, 1:4));
+                omegaDyn = stateVec(end, 5:7)';
                 rwAngMomentum0 = stateVec(end, 8:10)';
 
                 %% control torque for the next control loop
-                ez_b = quatRotate(q0, [0; 0; 1]);
+                ez_b = quatRotate(qDyn, [0; 0; 1]);
                 trqGrav = 3 * this.orb.meanMotion^2 * crossProduct(ez_b, this.sat.J * ez_b);
-                externalTorqueToCompensate = trqGrav - crossProduct(omega0, (this.sat.J) * omega0 + rwAngMomentum0);
-                rwCtrl = this.sat.calcRwControl(q0, omega0, rwAngMomentum0, externalTorqueToCompensate);
+                externalTorqueToCompensate = trqGrav - crossProduct(omegaDyn, (this.sat.J) * omegaDyn + rwAngMomentum0);
+                rwCtrl = this.sat.calcRwControl(qDyn, omegaDyn, externalTorqueToCompensate);
 
-                simResults(:, iterIdx) = [t; q0; omega0; rwAngMomentum0];
+                simResults(:, iterIdx) = [t; qDyn; omegaDyn; rwAngMomentum0];
             end
         end
 

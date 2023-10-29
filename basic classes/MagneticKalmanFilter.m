@@ -1,40 +1,46 @@
-classdef KalmanFilter < handle
-
-    properties(SetAccess = protected, GetAccess = public)
-        odeOptions = odeset('RelTol', 1e-9, 'AbsTol', 1e-9);
-
-        sat % satellite object
-        orb % orbit object
-
-        P % error covariance matrix
-        R % sensor noise covariance matrix
-        Q % process noise covariance matrix
-    end
+classdef MagneticKalmanFilter < AbstractKalmanFilter
+% magnetometer-based EKF for magnetic attitude control
 
     methods
-        function this = KalmanFilter(options)
+
+        function this = MagneticKalmanFilter(options)
             arguments
-                options.sat
-                options.orb
-                options.env
-                options.sigmaQ0 {mustBeNumeric} = []
-                options.sigmaOmega0 {mustBeNumeric} = []
+                options.sat {mustBeA(options.sat, 'Satellite')}
+                options.orb {mustBeA(options.orb, 'CircularOrbit')}
+                options.env {mustBeA(options.env, 'Environment')}
+                options.sigmaQ0 {mustBeNumeric} = 1e-10
+                options.sigmaOmega0 {mustBeNumeric} = 1e-10
             end
 
             this.sat = options.sat;
             this.orb = options.orb;
+
             this.initProcessCovariance(options.env.distTorqueSigma);
             this.initErrorCovariance(options.sigmaQ0, options.sigmaOmega0);
             this.initMeasurementsCovariance();
         end
 
-        function estimatedX = estimate(this, t0, x0, mCtrl, bModel0, bmodelT, bSensor)
+        function estimatedX = estimate(this, t0, x0, bModel0, bmodelT, bSensor, mCtrl)
+            arguments
+                this
+                t0 {mustBeNumeric}
+                x0 {mustBeNumeric}
+                bModel0(3, 1) {mustBeNumeric}
+                bmodelT(3, 1) {mustBeNumeric}
+                bSensor(3, 1) {mustBeNumeric}
+                mCtrl(3, 1) {mustBeNumeric} = [0; 0; 0];                
+            end
 
             [predictedX, predictedP] = this.prediction(t0, x0, bModel0, mCtrl);
 
             estimatedX = this.correction(predictedX, predictedP, bmodelT, bSensor);
         end
 
+    end
+
+    methods (Access = protected)
+        
+        % EKF predictor
         function [predictedX, predictedP] = prediction(this, t0, x0, bModel0, mCtrl)
             bModel = quatRotate(x0(1:4), bModel0);
 
@@ -57,6 +63,7 @@ classdef KalmanFilter < handle
             predictedP = Phi * this.P * Phi' + this.Q;
         end
 
+        % EKF corrector
         function estimatedX = correction(this, predictedX, predictedP, bModelT, bSensor)
             bModelBody = quatRotate(predictedX(1:4), bModelT);
             bModelNorm = vecnorm(bModelBody);
@@ -64,7 +71,7 @@ classdef KalmanFilter < handle
             z = bSensor / bModelNorm;
             Hx = bModelBody / bModelNorm;
 
-            H = this.calcObservationMatrix (Hx);
+            H = MagneticKalmanFilter.calcObservationMatrix(Hx);
             K = this.calcKalmanGain(predictedP, H, bModelNorm);
 
             correctedX = K * (z - Hx);
@@ -76,10 +83,8 @@ classdef KalmanFilter < handle
 
             this.P = (eye(6) - K * H) * predictedP;
         end
-    end
 
-    methods (Access = private)
-
+%% initialization methods
         function initErrorCovariance(this, sigmaQ0, sigmaOmega0)
             this.P = blkdiag(eye(3) * sigmaQ0^2, eye(3) * sigmaOmega0^2);
         end
@@ -95,6 +100,7 @@ classdef KalmanFilter < handle
             this.R = diag(this.sat.mtm.noiseSigma .* this.sat.mtm.noiseSigma);
         end
 
+%% state-dependent EKF matrices
         function Phi = calcEvolutionMatrix(this, state, bModel, mCtrl)
             q = state(1:4);
             omega = state(5:7);
@@ -116,10 +122,6 @@ classdef KalmanFilter < handle
             Phi =  eye(6) + F * this.sat.controlParams.tLoop;
         end
 
-        function H = calcObservationMatrix(this, bModel)
-            H = [2 * skewSymm(bModel), zeros(3)];
-        end
-
         function K = calcKalmanGain(this, P, H, bModelNorm)
             S = H * P * H' + this.R / bModelNorm^2;
 
@@ -127,4 +129,13 @@ classdef KalmanFilter < handle
         end
 
     end
+
+    methods (Static)
+
+        function H = calcObservationMatrix(bModel)
+            H = [2 * skewSymm(bModel), zeros(3)];
+        end
+
+    end
+
 end
