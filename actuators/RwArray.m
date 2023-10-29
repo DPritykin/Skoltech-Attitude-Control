@@ -41,7 +41,8 @@ classdef RwArray < handle
 
         function actuatedTorque = actuateCommand(this, commandTorque, duration)
             actuatedTorque = zeros(3, 1);
-            torqueAllocation = this.allocateTorque(commandTorque);
+            % minus because of action-reaction
+            torqueAllocation = -this.allocateTorque(-commandTorque);
 
             for rwIdx = 1:size(this.reactionwheels, 2)
                 actuatedTorque = actuatedTorque + ...
