@@ -5,11 +5,11 @@
 % adcs state determination - Extended Kalman Filter
 
 clc
-clear
+clear all
 
 %% environment settings 
 
-env = Environment(distTorqueSigma = 3e-9, ...  % [N * m] disturbance of the torque
+env = Environment(distTorqueSigma = 1e-8, ...  % [N * m] disturbance of the torque
                   magnFieldSigma = 2e-7);      % [T] noise to create actual magnetic field
 
 %% orbit settings
@@ -28,8 +28,8 @@ sat = Satellite([0.05466 -0.04e-3 -0.06e-3; ...
 sat.setControlParams(tMeas = 0, ...                 % [s] sampling time step
                      tCtrl = 0.1, ...               % [s] control time step
                      qReq = [1; 0; 0; 0], ...       % [-] required orbital orientation
-                     kQ = 3, ...                    % [-] P gain for PID-regulator
-                     kW = 3.2);                    % [-] D gain for PID-regulator
+                     kQ = 0.01, ...                  % [-] P gain for PID-regulator
+                     kW = 0.1);                    % [-] D gain for PID-regulator
 
 % adding a magnetometer
 mtm = Magnetometer(bias = [0; 0; 0;], ...           % [T] magnetometer bias
@@ -40,13 +40,13 @@ sat.setMagnetometer(mtm);
 
 % adding a sun sensor 
 ss = SunSensor(bias = [0; 0; 0;], ...               % [rad] sun sensor bias
-               sigma = deg2rad(1), ...              % [rad] sun sensor measurement deviation (CubeSense Gen-1 SS)
+               sigma = deg2rad(1), ...              % [rad] sun sensor measurement deviation (Skoltech-F)
                dcm = eye(3), ...                    % dcm from sensor's axes to the host satellite body frame
-               fovDeg = 120, ...                    % [deg] sun sensor field of view constraint 
+               fovDeg = 120, ...                    % [deg] sun sensor field of view constraint (Skoltech-F)
                boresightDirection = [0; 0; 1]);     % center of sun sensor's FOV                      
 
 % setting up an array of n sun sensors 
-sunSensorArray = SSArray(baselineSS = ss, ...           % a Sun Sensor object
+sunSensorArray = SSArray(baselineSS = ss, ...           % a Sun Sensor object (Skoltech-F)
                          dcm = [eye(3); 
                                 0 0 1; 0 1 0; -1 0 0;
                                 -1 0 0; 0 0 1; 0 1 0;
@@ -57,13 +57,13 @@ sunSensorArray = SSArray(baselineSS = ss, ...           % a Sun Sensor object
 sat.setSSArray(sunSensorArray);
 
 % defining a reaction wheel
-rw = ReactionWheel(maxTorque = 0.97e-3, ...                 % [Nm] max torque RW can produce
+rw = ReactionWheel(maxTorque = 0.97e-3, ...              % [Nm] max torque RW can produce (Skoltech-F)
                    maxAngMomentum = 1e-2);               % [Nms] max angular momentum RW can have
 
-% setting up an array of 3 identical RWs onboard of the sat
-standardRwArray = RwArray(baselineRw = rw,...           % a ReactionWheel object
-                          rwCount = 3, ...
-                          doStandardXyzArray = true);    % 3 RWs along the X, y, and Z axes of the satellite body-frame
+% setting up an array of identical RWs onboard of the sat (Skoltech-F)
+rwSetup = RwArrayConfiguration.regularTetrahedron; 
+standardRwArray = RwArray(baselineRw = rw, ...           % a ReactionWheel object
+                          rwConfiguration = rwSetup); 
 
 sat.setRwArray(standardRwArray);
 
@@ -77,7 +77,7 @@ ekf = KalmanFilter(sat = sat, ...      % Satellite object
 
 %% simulation settings
 
-simulationTime = 120;
+simulationTime = 150;
 sim = Simulation(simulationTime);
 
 sim.setEnvironment(env);
