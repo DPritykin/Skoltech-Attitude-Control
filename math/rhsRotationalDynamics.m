@@ -29,13 +29,15 @@ function res = rhsRotationalDynamics(t, x, sat, orb, trqCtrl, trqDist)
 
     dq = 0.5 * quatProduct(q, [0; Omega]);
 
-    dOmega = sat.invJ * (- crossProduct(omega, (sat.J) * omega + h) + ...
+    domega = sat.invJ * (- crossProduct(omega, (sat.J) * omega + h) + ...
                            trqCtrl + trqGrav + trqDist);
+
+
 
     if rwControl
         dh = - trqCtrl;
-        res = [dq; dOmega; dh];
+        res = [dq; domega; dh];
     else
-        res = [dq; dOmega];
+        res = [dq; domega];
     end
 end
