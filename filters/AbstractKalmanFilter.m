@@ -9,11 +9,21 @@ classdef AbstractKalmanFilter < handle
         P % error covariance matrix
         R % sensor noise covariance matrix
         Q % process noise covariance matrix
+
+        traceP % trace of error covariance matrix
     end
 
     methods (Abstract)
 
         estimate(this)
+
+    end
+
+    methods
+
+        function val = get.traceP(this)
+            val = trace(this.P);
+        end
 
     end
 
@@ -25,6 +35,7 @@ classdef AbstractKalmanFilter < handle
         initProcessCovariance(this)
         initErrorCovariance(this)
         initMeasurementsCovariance(this)
+
     end
 
 end

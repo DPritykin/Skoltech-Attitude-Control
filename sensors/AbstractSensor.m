@@ -11,10 +11,13 @@ classdef AbstractSensor < handle
     end
 
     methods (Abstract)
+
         sensorOutput = getSensorReadings(this, trueValue)
+
     end
 
     methods
+
         function this = AbstractSensor(parameters)
             arguments
                 parameters.bias {mustBeNumeric} = [0; 0; 0];
@@ -34,7 +37,7 @@ classdef AbstractSensor < handle
             this.dcm = parameters.dcm;
         end
 
-        function setBias(this, bias)
+        function set.bias(this, bias)
             arguments
                 this
                 bias {mustBeNumeric} = [0; 0; 0];
@@ -42,5 +45,19 @@ classdef AbstractSensor < handle
 
             this.bias = bias;
         end
+
+        function set.noiseSigma(this, sigma)
+            arguments
+                this
+                sigma {mustBeNumeric}
+            end
+
+            if length(sigma) == 3
+                this.noiseSigma = sigma;
+            else
+                this.noiseSigma = repmat(sigma(1), 3, 1);
+            end
+        end
+
     end
 end

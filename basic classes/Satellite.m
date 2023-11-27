@@ -8,6 +8,7 @@ classdef Satellite < handle
 
         mtm           % magnetometer
         gyro          % gyroscope
+        sunSensors    % sun sensors array
 
         mtq           % magnetorquer array
         rw            % reaction wheels array
@@ -62,6 +63,14 @@ classdef Satellite < handle
                 this.gyro = gyro;
             else
                 error('Satellite:InvalidGyro', 'Invalid Gyroscope object!');
+            end
+        end
+
+        function setSunSensorsArray(this, sunSensorsArray)
+            if isa(sunSensorsArray, 'SunSensorsArray')
+                this.sunSensors = sunSensorsArray;
+            else
+                error('Satellite:InvalidSunSensors', 'Invalid Sun Sensors Array object!');
             end
         end
 

@@ -60,4 +60,14 @@ classdef Environment < handle
             val = normrnd(0, this.distTorqueSigma, [3, 1]);
         end        
     end
+
+    methods (Static)
+
+        % Sun direction in ECI
+        function val = getSunDirectionEci(datevec)
+            val = sun(jday(datevec(1), datevec(2), datevec(3), datevec(4), datevec(5), datevec(6)))';
+        end
+
+    end
+
 end

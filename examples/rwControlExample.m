@@ -10,7 +10,7 @@ clear
 %% environment settings 
 
 env = Environment(distTorqueSigma = 3e-9, ...  % [N * m] disturbance of the torque
-                  magnFieldSigma = 2e-7);      % [T] noise to create actual magnetic field
+                  magnFieldSigma = 2e-7);      % [T] noise to model "actual"/envirnomnetal geomagnetic field
 
 %% orbit settings
 
@@ -25,28 +25,79 @@ sat = Satellite(diag([0.015 0.014 0.007])); % [kg * m^2] inertia tensor for sate
 % defining control parameters
 sat.setControlParams(tCtrl = 1e-3, ...          % [s] control time step
                      qReq = [1; 0; 0; 0], ...   % [-] required orbital orientation
-                     kQ = 1, ...                % [-] P gain for PID-regulator
-                     kW = 2);                   % [-] D gain for PID-regulator
+                     kQ = 1, ...              % [-] P gain for PID-regulator
+                     kW = 2);                 % [-] D gain for PID-regulator
 
 % defining a reaction wheel
 rw = ReactionWheel(maxTorque = 1e-3, ...        % [Nm] max torque RW can produce
                    maxAngMomentum = 1e-2);      % [Nms] max angular momentum RW can have
 
-% setting up an array of 3 identical RWs onboard of the sat
-rwSetup = RwArrayConfiguration.regularTetrahedron;
+% setting up an array of identical RWs onboard of the sat
+rwSetup = RwArrayConfiguration.standardXYZ;
 standardRwArray = RwArray(baselineRw = rw, ...        % a ReactionWheel object
-                          rwConfiguration = rwSetup); % 3 RWs along the X, y, and Z axes of the satellite body-frame
+                          rwConfiguration = rwSetup); % rw configuration type  
 
 sat.setRwArray(standardRwArray);
 
+% adding a magnetometer
+mtm = Magnetometer(bias = [0; 0; 0;], ...         % [T] magnetometer bias
+                   sigma = 1e-7, ...              % [T] magnetometer measurement deviation
+                   position = [2; 2; -3] * 1e-2); % [m] magnetometer position in the body-frame
+
+sat.setMagnetometer(mtm);
+
+% adding a sun sensor 
+sunSensor = SunSensor(bias = [0; 0; 0;], ...               % [rad] sun sensor bias
+                      sigma = deg2rad(1), ...              % [rad] sun sensor measurement deviation
+                      dcm = eye(3), ...                    % dcm from sensor's axes to the host satellite body frame
+                      fovDeg = 120, ...                    % [deg] sun sensor field of view cone angle
+                      boresightDirection = [0; 0; 1]);     % centerline of sun sensor's field of view cone
+
+% setting up an array of n sun sensors 
+sunSensorArray = SunSensorsArray(baselineSensor = sunSensor, ...           
+                                 dcm = [eye(3);
+
+                                        1 0 0;
+                                        0 cos(pi) -sin(pi);
+                                        0 sin(pi) cos(pi);
+
+                                        1 0 0;
+                                        0 cos(pi /2) -sin(pi / 2);
+                                        0 sin(pi / 2) cos(pi / 2);
+
+                                        1 0 0;
+                                        0 cos(pi / 2) -sin(-pi / 2);
+                                        0 sin(-pi  / 2) cos(pi / 2);
+
+                                        cos(pi / 2) 0 sin(pi / 2);
+                                        0 1 0;
+                                        -sin(pi / 2) 0 cos(pi / 2);
+
+                                        cos(pi / 2) 0 sin(-pi / 2);
+                                        0 1 0;
+                                        -sin(-pi / 2) 0 cos(pi / 2);                                        ] ...
+                                 );
+
+sat.setSunSensorsArray(sunSensorArray);
+
+%% EKF settings
+
+ekf = RwKalmanFilter(sat = sat, ...      % Satellite object
+                     orb = orb, ...      % CircularOrbit object 
+                     env = env, ...      % Environment object
+                     sigmaQ0 = 1, ...    % variance to initialize the error covariance matrix (quaternion part)
+                     sigmaOmega0 = 0.1); % variance to initialize the error covariance matrix (omega part)
+
 %% simulation settings
 
+startDateG = [2023 11 26 0 0 0];
 simulationTime = 30;
 sim = Simulation(simulationTime);
 
 sim.setEnvironment(env);
 sim.setOrbit(orb);
 sim.setSatellite(sat);
+sim.setFilter(ekf);
 
 %% simulation loop
 simResults = sim.run(SimulationType.rwControl);
