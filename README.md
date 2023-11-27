@@ -9,8 +9,7 @@ A satellite in the circular orbit is magnetically controlled to keep its orbital
 
 the code is based on the paper D.S. Ivanov, M.Yu. Ovchinnikov et al.
 
-Advanced numerical study of the three-axis magnetic attitude control and determination with uncertainties (Acta Astronautica
-Volume 132, March 2017, Pages 103-110)
+Advanced numerical study of the three-axis magnetic attitude control and determination with uncertainties (Acta Astronautica Volume 132, March 2017, Pages 103-110)
 
 https://doi.org/10.1016/j.actaastro.2016.11.045
 
@@ -21,3 +20,9 @@ A satellite in the circular orbit that uses magnetorquers to damp its initial ro
 3. rwControlExample
 
 A satellite in the circular orbit that uses reaction wheels to come to the orbital orientation
+
+the code is a part of the paper by Ahmed Mahfouz, Dmitry Pritykin, and James Biggs
+
+Hybrid Attitude Control for Nano-Spacecraft: Reaction Wheel Failure and Singularity Handling (Journal of Guidance, Control, and Dynamics 2021 44:3, 548-558) 
+
+https://doi.org/10.2514/1.G005525
