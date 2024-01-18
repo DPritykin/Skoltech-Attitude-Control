@@ -6,14 +6,18 @@ classdef AbstractSensor < handle
 
         position = [0; 0; 0]  % position (in the body-frame) 
                               % at which measurements are taken
-        dcm = eye(3)          % dcm from sensor's axes to the host satellite body frame
+        dcm = eye(3)          % dcm from sensor's axes to the
+                              % host satellite body frame
     end
 
     methods (Abstract)
-        [sensorOutput,intensity] = getSensorReadings(this, trueValue)
+
+        sensorOutput = getSensorReadings(this, trueValue)
+
     end
 
     methods
+
         function this = AbstractSensor(parameters)
             arguments
                 parameters.bias {mustBeNumeric} = [0; 0; 0];
@@ -31,10 +35,9 @@ classdef AbstractSensor < handle
             end
             this.position = parameters.position;
             this.dcm = parameters.dcm;
-
         end
 
-        function setBias(this, bias)
+        function set.bias(this, bias)
             arguments
                 this
                 bias {mustBeNumeric} = [0; 0; 0];
@@ -42,5 +45,19 @@ classdef AbstractSensor < handle
 
             this.bias = bias;
         end
+
+        function set.noiseSigma(this, sigma)
+            arguments
+                this
+                sigma {mustBeNumeric}
+            end
+
+            if length(sigma) == 3
+                this.noiseSigma = sigma;
+            else
+                this.noiseSigma = repmat(sigma(1), 3, 1);
+            end
+        end
+
     end
 end

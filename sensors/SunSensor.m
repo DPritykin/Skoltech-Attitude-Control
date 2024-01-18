@@ -7,47 +7,29 @@ classdef SunSensor < AbstractSensor
     end
 
     methods
+
         function this = SunSensor(parameters)
             arguments
-                parameters.bias {mustBeNumeric} = [0; 0; 0];
+                parameters.bias(3, 1) {mustBeNumeric}  = [0; 0; 0];
                 parameters.sigma {mustBeNumeric} = deg2rad(0.2);
-                parameters.dcm {mustBeNumeric} = eye(3);
+                parameters.dcm(3, 3) {mustBeNumeric} = eye(3);
                 parameters.fovDeg {mustBeNumeric} = 120;
-                parameters.boresightDirection {mustBeNumeric} = [0; 0; 1];
+                parameters.boresightDirection(3, 1) {mustBeNumeric} = [0; 0; 1];
             end
 
-            this.bias                    = parameters.bias;
-
-            if length(parameters.sigma) == 3
-                this.noiseSigma = parameters.sigma;
-            else
-                this.noiseSigma = repmat(parameters.sigma(1), 3, 1);
-            end
-
-            this.fov                     = deg2rad(parameters.fovDeg);
-
-            this.setBoresightDirection(parameters.boresightDirection);
-            this.setDcm(parameters.dcm);
+            this.bias = parameters.bias;
+            this.noiseSigma = parameters.sigma;
+            this.fov = deg2rad(parameters.fovDeg);
+            this.dcm = parameters.dcm;
+            this.boresightDirection  = parameters.boresightDirection;
         end
-
-        function setbias(this, bias)
-            this.bias = bias;
-        end
-
-        function setnoiseSigma(this, noiseSigma)
-            this.noiseSigma = noiseSigma;
-        end 
-
-        function setfov(this, fov)
-            this.fov = fov;
-        end 
-
-        function setboresightDirection(this, boresightDirection)
-            this.boresightDirection = boresightDirection;
-        end 
 
         function [val, intensity] = getSensorReadings(this, trueSunDirection, sunEclipse)
-            % trueSunDirection - sun vector in the body frame
+            arguments
+                this
+                trueSunDirection(3, 1) {mustBeNumeric}
+                sunEclipse {mustBeNumericOrLogical} = 0
+            end
 
             sunIncidentAngleCos = dot(trueSunDirection, this.boresightDirectionSatRF);
 
@@ -75,7 +57,7 @@ classdef SunSensor < AbstractSensor
         function setDcm(this, dcm)
             arguments
                 this
-                dcm(3, 3) {mustBeNumeric} 
+                dcm(3, 3) {mustBeNumeric}
             end
 
             if abs(det(dcm) - 1) > 1e-10
@@ -83,21 +65,30 @@ classdef SunSensor < AbstractSensor
             end
 
             this.dcm = dcm;
-            this.boresightDirectionSatRF = this.dcm * this.boresightDirection;
+            this.updateBoresightDirectionRF();
         end
 
-        function setBoresightDirection(this, vec)
+        function set.fov(this, fov)
+            this.fov = fov;
+        end
+
+        function set.boresightDirection(this, vec)
             arguments
                 this
                 vec(3, 1) {mustBeNumeric} = [0; 0; 1];
             end
 
             this.boresightDirection =  vec / vecnorm(vec);
+            this.updateBoresightDirectionRF();
+        end
+
+    end
+
+    methods (Access = protected)
+
+        function updateBoresightDirectionRF(this)
             this.boresightDirectionSatRF = this.dcm * this.boresightDirection;
         end
 
     end
 end
-
-
-          
