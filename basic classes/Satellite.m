@@ -8,7 +8,7 @@ classdef Satellite < handle
 
         mtm           % magnetometer
         gyro          % gyroscope
-        ss            % sun sensor
+        sunSensors    % sun sensors array
 
         mtq           % magnetorquer array
         rw            % reaction wheels array
@@ -66,6 +66,14 @@ classdef Satellite < handle
             end
         end
 
+        function setSunSensorsArray(this, sunSensorsArray)
+            if isa(sunSensorsArray, 'SunSensorsArray')
+                this.sunSensors = sunSensorsArray;
+            else
+                error('Satellite:InvalidSunSensors', 'Invalid Sun Sensors Array object!');
+            end
+        end
+
         function setMtqArray(this, mtqArray)
             if isa(mtqArray, 'MtqArray')
                 this.mtq = mtqArray;
@@ -79,14 +87,6 @@ classdef Satellite < handle
                 this.rw = rwArray;
             else
                 error('Satellite:InvalidRw', 'Invalid Reaction Wheels Array object!');
-            end
-        end
-
-        function setSSArray(this, SSArray)
-            if isa(SSArray, 'SSArray')
-                this.ss = SSArray;
-            else
-                error('Satellite:InvalidSS', 'Invalid Sun Sensors Array object!');
             end
         end
 
@@ -118,15 +118,15 @@ classdef Satellite < handle
             m = m / maxRatio;
         end
 
-        function [trq, trqToActuate, AngMom] = calcRwControl(this, q, omega, externalTorqueToCompensate)
+        function [angMom, trq] = calcRwControl(this, q, omega, externalTorqueToCompensate)
             quatErr = quatProduct(this.controlParams.qReqCnj, q);
             omegaErr = omega - this.controlParams.omegaReq;
 
             trqToActuate = -externalTorqueToCompensate ...
                            -this.controlParams.kW * this.J * omegaErr ...
-                           -this.controlParams.kQ * this.J *quatErr(2:4);
-
-            [trq, AngMom] = this.rw.actuateCommand(trqToActuate, this.controlParams.tLoop);
+                           -this.controlParams.kQ * this.J * quatErr(2:4);
+            
+            [angMom, trq] = this.rw.actuateCommand(trqToActuate, this.controlParams.tLoop);
         end
     end
 end

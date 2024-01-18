@@ -7,6 +7,7 @@ classdef CircularOrbit < handle
 
         orbitRadius
         meanMotion
+        orbitalPeriod
     end
 
     methods
@@ -24,6 +25,7 @@ classdef CircularOrbit < handle
 
             this.orbitRadius = env.earthRadius + this.altitude;
             this.meanMotion = sqrt(env.muG / this.orbitRadius^3);
+            this.orbitalPeriod = 2 * pi * sqrt(this.orbitRadius^3 / env.muG); 
         end
 
         function [ePos, eVel] = calcUnitPosVel(this, argLat)
@@ -53,5 +55,5 @@ classdef CircularOrbit < handle
         function eci2orbMatrix = eci2orb(this, argLat)
             eci2orbMatrix = this.orb2eci(argLat)';
         end
-    end 
+    end
 end

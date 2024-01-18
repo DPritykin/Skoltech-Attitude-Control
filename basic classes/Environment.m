@@ -1,7 +1,6 @@
 classdef Environment < handle
 
     properties(SetAccess = protected, GetAccess = public)
-
         muG = 3.986e+14;         % [m^3 / s^2] standard gravitational parameter of the Earth
         mu0 = 1.257e-6;          % [N / A^2] vacuum permeability
         muE = 7.94e+22;          % [A * m^2] magnetic dipole moment of the Earth
@@ -34,23 +33,6 @@ classdef Environment < handle
                       -2 * sin(argLat) * sin(inclination)];
         end
 
-        function S_Vec = SunVecCalc(this,time,startTime)
-
-            baseTime = startTime;
-            durations = seconds(time);
-            timeValues = baseTime + durations;
-
-            utc = datetime(timeValues, 'TimeZone', 'UTC');
-            Mjd =  Mjday(year(utc), month(utc), day(utc), hour(utc), minute(utc), second(utc));
-            Mjd_TDB = Mjday_TDB(Mjd);
-
-            [r_Mercury,r_Venus,r_Earth,r_Mars,r_Jupiter,r_Saturn,r_Uranus, ...
-            r_Neptune,r_Pluto,r_Moon,r_Sun] = JPL_Eph_DE430(Mjd_TDB);
-           
-            S_Vec = r_Sun;
-
-        end 
-
         % picewise exponential atmospeheric model
         function rhoAtmo = getAtmosphericDensity(this, altitude)
             altitudeKm = altitude / this.km2m;
@@ -80,27 +62,26 @@ classdef Environment < handle
             val = normrnd(0, this.distTorqueSigma, [3, 1]);
         end        
 
-        function eclipse = sunEclipse(this, TransformedT, ePosAbs, t, startTime)
-
-            SunVecICRS = this.SunVecCalc(t, startTime);
-            SunVecAbs = TransformedT * SunVecICRS;
-            mag_rSun = vecnorm(SunVecAbs);
-
-            mag_rSat = sqrt(ePosAbs(1)^2 + ePosAbs(2)^2 + ePosAbs(3)^2);
+        function eclipse = sunEclipse(this, sunModelEci, PosEci)
+            los = strcmpi(lightofsun(PosEci/1e3, sunModelEci, 'e'),'yes');
             
-            x1 = this.earthRadius * this.AU / (this.sunRadius + this.earthRadius);
-            x2 = this.earthRadius * this.AU / (this.sunRadius - this.earthRadius);
-
-            % alpha1 = pi - acos(this.earthRadius / x1) - acos(this.earthRadius / mag_rSat);
-            alpha2 = acos(this.earthRadius / x2) - acos(this.earthRadius / mag_rSat);
-            alpha  = pi - acos(dotProduct(SunVecAbs, ePosAbs) / (mag_rSun * mag_rSat));
-
-            if alpha < alpha2       % Satellite in Umbral Region
-                eclipse = 1;
-            else 
+            if los == 1
                 eclipse = 0;
-            end 
+            elseif los == 0
+                eclipse = 1;
+            end
 
         end
     end
+
+    methods (Static)
+
+        % Sun direction in ECI
+        function val = getSunDirectionEci(datevec)
+            val = sun(jday(datevec(1), datevec(2), datevec(3), datevec(4), datevec(5), datevec(6)))';
+        end
+
+
+    end
+
 end
