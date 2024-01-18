@@ -15,7 +15,7 @@ classdef ReactionWheel < AbstractActuator
                 parameters.axis {mustBeNumeric} = [0; 0; 1];
                 parameters.dcm {mustBeNumeric} = eye(3);
                 parameters.noiseSigma {mustBeNumeric} = 1e-10;
-                parameters.maxTorque {mustBeNumeric} = 0.97e-3;
+                parameters.maxTorque {mustBeNumeric} = 1e-3;
                 parameters.maxAngMomentum {mustBeNumeric} = 1e-2;
             end
 
@@ -51,8 +51,10 @@ classdef ReactionWheel < AbstractActuator
             end
 
             outputTorque = this.actuateRequiredAction(requiredTorque);
-            this.angularMomentum = this.angularMomentum + sign(requiredTorque) * vecnorm(outputTorque) * duration;
-            
+
+            this.angularMomentum = this.angularMomentum + sign(requiredTorque) * vecnorm(outputTorque) * duration;  
+
+        end 
+        
         end
     end
-end

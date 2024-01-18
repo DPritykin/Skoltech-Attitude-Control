@@ -4,10 +4,10 @@ classdef AbstractActuator < handle
         name                % name of the actuator (e.g. mtqX or rwA)
         state = true        % whether or not the actuator is operable or faulted
         axis = [0; 0; 1]    % direction, in which the actuated output is produced (own axes)
-        dcm                 % conversion to body frame dcm * axis yields direction in the sat body frame
+        dcm                 % conversion to body frame dcm * axis yilds direction in the sat body frame
         axisBf
 
-        noiseSigma          % normal noise sigma
+        noiseSigma            % normal noise sigma
     end
 
     methods

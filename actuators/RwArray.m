@@ -39,18 +39,18 @@ classdef RwArray < handle
             this.aInv = inv(this.torqueAllocationMetric);
         end
 
-        function [actuatedTorque, AngMom] = actuateCommand(this, commandTorque, duration)
+        function [angularMomentum, actuatedTorque] = actuateCommand(this, commandTorque, duration)
             actuatedTorque = zeros(3, 1);
+            % minus because of action-reaction
             torqueAllocation = -this.allocateTorque(-commandTorque);
 
             for rwIdx = 1:size(this.reactionwheels, 2)
                 actuatedTorque = actuatedTorque + ...
                                  this.reactionwheels(rwIdx).actuateControlTorque(torqueAllocation(rwIdx), ...
                                                                                  duration);
+                angularMomentum = this.installationMatrix * this.angularMomentumInArray;
+
             end
-
-            AngMom = this.installationMatrix * this.angularMomentumInArray;
-
         end
     end
 
@@ -104,8 +104,8 @@ classdef RwArray < handle
 
             this.reactionwheels(rwIdx).setName(['rw' rwAllocation]);
             this.reactionwheels(rwIdx).setDcm(rwDcm);
-            installationAxis = rwDcm * defaultAxis;
-            this.installationMatrix(:, rwIdx) = installationAxis / vecnorm(installationAxis);
+            installatioAxis = rwDcm * defaultAxis;
+            this.installationMatrix(:, rwIdx) = installatioAxis / vecnorm(installatioAxis);
         end
 
         function updateTetrahedronConfiguration(this, rwAllocation, defaultAxis)
@@ -143,8 +143,8 @@ classdef RwArray < handle
 
             this.reactionwheels(rwIdx).setName(['rw' rwAllocation]);
             this.reactionwheels(rwIdx).setDcm(rwDcm);
-            installationAxis = rwDcm * defaultAxis;
-            this.installationMatrix(:, rwIdx) = installationAxis / vecnorm(installationAxis);
+            installatioAxis = rwDcm * defaultAxis;
+            this.installationMatrix(:, rwIdx) = installatioAxis / vecnorm(installatioAxis);
         end
 
     end
