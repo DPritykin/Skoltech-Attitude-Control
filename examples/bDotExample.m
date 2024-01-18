@@ -49,7 +49,7 @@ sat.setMtqArray(standardMtqArray);
 
 %% simulation settings
 
-simulationTime = 2 * 3600;
+simulationTime = 4 * 3600;
 sim = Simulation(simulationTime);
 
 sim.setEnvironment(env);
