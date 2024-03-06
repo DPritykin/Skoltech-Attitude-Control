@@ -80,6 +80,8 @@ classdef Simulation < handle
             q0 = q0 / vecnorm(q0);
 
             switch simulationType
+                case SimulationType.noControl
+                    simResults = this.simulateFreeRotation(q0, omega0);
                 case SimulationType.fullMagneticControl
                     simResults = this.simulateThreeAxialControl(q0, omega0);
                 case SimulationType.bDotControl
@@ -93,6 +95,31 @@ classdef Simulation < handle
     end
 
     methods(Access = protected)
+        
+        function simResults = simulateFreeRotation(this, qDyn, omegaDyn)
+            arguments
+                this
+                qDyn(4, 1) {mustBeNumeric}
+                omegaDyn(3, 1) {mustBeNumeric}
+            end
+
+            tSpan = 0:1:this.simulationTime;
+            sol = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
+                tSpan, [qDyn; omegaDyn], this.odeOptions);
+
+            simResults = [sol.x; sol.y];
+            sunModelBody = zeros(3, size(simResults, 2));
+
+            for idx = 1:length(sol.x)
+                t = sol.x(idx);
+                argLat = this.orb.meanMotion * t;
+                sunModelEci = Environment.getSunDirectionEci(datevec(this.startDate + t / 86400));
+                sunModelOrb = this.orb.eci2orb(argLat) * sunModelEci;
+                sunModelBody(:, idx) = quatRotate(sol.y(1:4, idx), sunModelOrb);
+            end
+
+            simResults = [simResults; sunModelBody];
+        end
 
         % rotational dynamics with three-axial magnetic controller
         function simResults = simulateThreeAxialControl(this, qDyn, omegaDyn)
@@ -285,7 +312,7 @@ classdef Simulation < handle
             end
 
             [ ~, stateVec ] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb, ctrlTorque, distTorque), ...
-                                    timeInterval, initialConditions, this.odeOptions);            
+                timeInterval, initialConditions, this.odeOptions);
         end
 
         % environmental magnetic field (different from the onboard direct dipole model)
