@@ -3,8 +3,7 @@ clear
 
 %% environment settings 
 
-env = Environment(distTorqueSigma = 3e-9, ...  % [N * m] disturbance of the torque
-                  magnFieldSigma = 2e-7);      % [T] noise to create actual magnetic field
+env = Environment();
 
 %% orbit settings
 
@@ -14,7 +13,7 @@ orb = CircularOrbit(env, ... % Environment object
 
 %% satellite settings
 
-sat = Satellite(diag([0.015 0.014 0.007])); % [kg * m^2] inertia tensor for satellite
+sat = Satellite(diag([3 4 5])); % [kg * m^2] inertia tensor for satellite
 
 %% simulation settings
 

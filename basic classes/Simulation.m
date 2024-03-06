@@ -104,21 +104,21 @@ classdef Simulation < handle
             end
 
             tSpan = 0:1:this.simulationTime;
-            sol = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
+            [T, X] = ode45(@(t, x) rhsRotationalDynamics(t, x, this.sat, this.orb), ...
                 tSpan, [qDyn; omegaDyn], this.odeOptions);
 
-            simResults = [sol.x; sol.y];
-            sunModelBody = zeros(3, size(simResults, 2));
+            simResults = [T, X];
+            sunModelBody = zeros(size(simResults, 1), 3);
 
-            for idx = 1:length(sol.x)
-                t = sol.x(idx);
+            for idx = 1:length(T)
+                t = T(idx);
                 argLat = this.orb.meanMotion * t;
                 sunModelEci = Environment.getSunDirectionEci(datevec(this.startDate + t / 86400));
                 sunModelOrb = this.orb.eci2orb(argLat) * sunModelEci;
-                sunModelBody(:, idx) = quatRotate(sol.y(1:4, idx), sunModelOrb);
+                sunModelBody(idx, :) = quatRotate(X(idx, 1:4), sunModelOrb);
             end
 
-            simResults = [simResults; sunModelBody];
+            simResults = [simResults, sunModelBody]';
         end
 
         % rotational dynamics with three-axial magnetic controller
